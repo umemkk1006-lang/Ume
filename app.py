@@ -3,8 +3,19 @@ import json, os
 from datetime import datetime
 import pandas as pd
 import streamlit as st
+st.set_page_config(page_title="バイアス監査アプリ", layout="centered", initial_sidebar_state="collapsed")
 
-st.set_page_config(page_title="バイアス監査アプリ（MVP）", layout="wide")
+st.markdown("""
+<style>
+h1 {font-size:1.6rem !important; text-align:center; margin-bottom:0.2em;}
+.subtitle {text-align:center; font-size:0.9rem; color:#6c757d;}
+.process {text-align:center; font-size:0.85rem; background:#f8f9fa; border-radius:8px; padding:0.4em; margin:0 0 1.2em 0;}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("# 🧠 バイアス監査アプリ")
+st.markdown('<div class="subtitle">Self-Bias Monitor (MVP)</div>', unsafe_allow_html=True)
+st.markdown('<div class="process">① 入力 → ② 解析 → ③ 介入 → ④ 支援 → ⑤ 保存</div>', unsafe_allow_html=True)
 
 # ========= ルール読み込み =========
 @st.cache_data
@@ -348,41 +359,39 @@ if findings:
 else:
     st.caption("（解析未実行 or ヒットなし）")
 
-# 4. 介入の選択と記入（このブロックの最初に置く）
+# 4. =========介入の選択と記入=========
+
 st.header("4. 介入の選択と記入")
 
-# 既定値（無い場合は空）をセッションから取り出す
+# 既定値（無い場合は空）をセッションから取り出す（必要なら）
 _selected_default = st.session_state.get("selected", [])
 
-# key="selected" を付けて保存先を固定
+options = {
+    "外部視点": "第三者や未来の自分の視点で見直す",
+    "ベースレート確認": "統計や過去の確率に照らして再考する",
+    "フレーミング反転": "損得の表現を入れ替えて評価する",
+    "決定遅延": "24時間置いてから再評価する",
+    "プレモーテム": "失敗を仮定して原因と予防策を先に考える",
+}
+
 selected = st.multiselect(
-    "実施する介入（最大2つ推奨）",
-    ["プレモーテム", "外部視点", "ベースレート確認", "フレーミング反転（％→円/損失）", "決定遅延（24h後に再確認）"],
+    "実施する介入（最大2つ）",
+    list(options.keys()),
+    max_selections=2,
     default=_selected_default,
     key="selected",
+    help="介入＝バイアスを中和する“思考アクション”です。"
 )
 
-# ========= 4. 介入の選択と記入 =========
-st.header("4. 介入の選択と記入")
-interventions_all = ["プレモーテム", "外部視点", "ベースレート確認", "フレーミング反転（％→円/損失）", "決定遅延（24h後に再確認）"]
-selected = st.multiselect("実施する介入（最大2つ推奨）", interventions_all, default=[])
+for k in selected:
+    st.caption(f"ℹ️ {k}: {options[k]}")
 
-premortem = outside_A = outside_B = outside_C = base_rate_source = framing = ""
-delay_24h = False
-
+# プレモーテム選択時の入力欄
 if "プレモーテム" in selected:
-    premortem = st.text_area("プレモーテム：最悪結果の主因Top3と予防策（各1行）", height=120)
-if "外部視点" in selected:
-    cA, cB, cC = st.columns(3)
-    with cA: outside_A = st.text_area("Aさんの3行コメント", height=90)
-    with cB: outside_B = st.text_area("Bさんの3行コメント", height=90)
-    with cC: outside_C = st.text_area("Cさんの3行コメント", height=90)
-if "ベースレート確認" in selected:
-    base_rate_source = st.text_input("出典URLや資料名（なければ『なし』）", value="")
-if "フレーミング反転（％→円/損失）" in selected:
-    framing = st.text_input("反転後の表現（例：年◯円の損失に相当 など）", value="")
-if "決定遅延（24h後に再確認）" in selected:
-    delay_24h = st.toggle("24時間後に再確認（端末側のリマインダ設定を推奨）", value=True)
+    st.write("🔍 プレモーテム：最悪結果の主因Top3と予防策（各1行）")
+    for i in range(1, 4):
+        st.text_input(f"主因{i}", placeholder="例：準備不足")
+        st.text_input(f"予防策{i}", placeholder="例：前日にチェックリスト作成")
 
 # ========= 5. 再評価 & 保存 =========
 st.header("5. 再評価と保存")
