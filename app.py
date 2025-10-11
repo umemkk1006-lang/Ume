@@ -421,23 +421,52 @@ if st.button("解析する", type="primary", use_container_width=True):
         st.session_state["confidence_pre"] = confidence_pre
         st.success("解析しました。下の結果をご確認ください。")
 
-# ========= 3. バイアス検知（候補） =========
+if st.button("解析する", type="primary"):
+    # ====== ここをあなたの解析処理に置き換え ======
+    # 例）findings = calc_findings(inputs)  # list を返す。未検出なら []
+    findings = []  # 仮：今回は未検出だったケース
+    debug_info = {"threshold": "-", "scores": {}}
+    # ================================================
+    st.session_state.findings = findings or []     # 空でもリストを保存
+    st.session_state.debug = debug_info
+    st.success("解析しました。下の結果をご確認ください。")
+
+
+# --- session_state の初期化 ---
+if "findings" not in st.session_state:
+    st.session_state.findings = None   # None=未実行, []=未検出, ["..."]=検出あり
+if "debug" not in st.session_state:
+    st.session_state.debug = {}
+
+
+# ======== 3. バイアス検知（候補） ========
 st.header("3. バイアス検知（候補）")
-findings = st.session_state.get("findings", [])
+
+findings = st.session_state.get("findings", None)  # ← 既定を None に
 dbg = st.session_state.get("debug", {})
-if findings:
+
+if findings is None:
+    # まだ解析を押していない
+    st.caption("（解析未実行）")
+
+elif len(findings) == 0:
+    # 解析はしたがヒットなし → ここで褒める＆次導線
+    st.success("🎉 今回は偏りは見つかりませんでした。落ち着いた判断ができていますね。")
+    st.info("次は「4. 介入の選択と記入」または「4️⃣ 支援介入」で、現実的な行動プランを作りましょう。")
+
+else:
+    # ヒットあり → 既存の詳細表示ロジックをここに
     st.caption(f"内部しきい値: {dbg.get('threshold','-')} / スコア: {dbg.get('scores',{})}")
     for f in findings:
         with st.container(border=True):
-            st.subheader(f"{f['label']}（確度{f['confidence']}）")
+            st.subheader(f"{f['label']}（確度:{f.get('confidence')}）")
             if f.get("score") is not None:
-                st.caption(f"内部スコア：{f['score']}")
-            st.write("根拠：", "、".join(f["evidence"]) if f["evidence"] else "（自動推定）")
+                st.caption(f"内部スコア: {f['score']}")
+            st.write("根拠: " + "、".join(f.get("evidence", [])) if f.get("evidence") else "（自動推定）")
             with st.expander("このバイアスへの介入案を表示"):
                 for s in f.get("suggestions", []):
                     st.markdown(f"- {s}")
-else:
-    st.caption("（解析未実行 or ヒットなし）")
+
 
 # 4. =========介入の選択と記入=========
 
