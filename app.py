@@ -389,6 +389,38 @@ if "プレモーテム" in selected:
     for i in range(1, 4):
         st.text_input(f"主因{i}", placeholder="例：準備不足")
         st.text_input(f"予防策{i}", placeholder="例：前日にチェックリスト作成")
+st.subheader("4. 支援介入（現実的な対策）")
+
+theme  = st.text_input("いまの不安を一言で（例: 教育費が心配）")
+income = st.text_input("どのくらいの収入があれば安心?（例: 月25万円）")
+years  = st.number_input("老後まであと何年？", min_value=0, max_value=60, value=20, step=1)
+areas  = st.multiselect("心配分野", ["教育費", "健康", "住宅ローン", "老後資金", "生活費"])
+
+if st.button("提案を表示"):
+    st.markdown("**提案例**")
+    st.write("- 自治体の就学援助制度や住宅関連の補助を確認しましょう。")
+    st.write("- 無料・低コストの学習サービスや図書館講座を活用しましょう。")
+    st.write("- 1日10分の家計記録で見えない支出を可視化しましょう。")
+
+# あなたの解析結果に置き換える
+detected_biases = []
+
+st.subheader("2. 解析結果")
+if not detected_biases:
+    st.success("今回は偏りは見つかりませんでした。落ち着いた判断ができています。")
+    st.info("次は『支援介入』で、現実的な行動プランも検討しましょう。")
+else:
+    st.warning("検出された可能性のあるバイアス:")
+    for b in detected_biases:
+        st.write(f"- {b}")
+st.markdown("""
+<style>
+p, .stMarkdown { line-height: 1.5; }
+.block-container { padding-top: 1rem; padding-bottom: 2rem; }
+</style>
+""", unsafe_allow_html=True)
+
+
 
 # ========= 5. 再評価 & 保存 =========
 st.header("5. 再評価と保存")
