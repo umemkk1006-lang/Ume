@@ -103,9 +103,6 @@ def save_decision(row, path="decisions.csv"):
     df.to_csv(path, index=False, encoding="utf-8-sig")
 
 # ========= ヘッダー =========
-st.title("バイアス監査アプリ（MVP）")
-st.markdown("1) かんたん入力 → 2) 解析 → 3) 介入 → 4) 再評価 → 5) 保存/履歴")
-
 
 with st.expander("設定（任意）", expanded=False):
     st.caption("検出の敏感さ（高いほど拾いやすい）")
