@@ -3,6 +3,89 @@ import json, os
 from datetime import datetime
 import pandas as pd
 import streamlit as st
+
+# === モバイル最適化CSS ===
+st.markdown("""
+<style>
+/* 全体レイアウト */
+.block-container {
+    padding-top: 0.8rem;
+    padding-bottom: 2rem;
+    max-width: 720px;
+    margin: auto;
+}
+
+/* タイトル・サブタイトル */
+h1 {
+    font-size: 1.5rem !important;
+    text-align: center;
+    margin-bottom: 0.3em;
+}
+.subtitle {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 1em;
+}
+
+/* 流れ部分（①〜⑤） */
+.process {
+    text-align: center;
+    font-size: 0.85rem;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    padding: 0.3em 0.6em;
+    margin-bottom: 1.2em;
+}
+
+/* セクション見出し */
+h2, h3, .stSubheader {
+    font-size: 1.15rem !important;
+    margin-top: 1.6em !important;
+    margin-bottom: 0.8em !important;
+}
+
+/* 説明文・本文 */
+p, .stMarkdown {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* 入力フォーム調整 */
+.stTextInput, .stNumberInput, .stMultiSelect {
+    font-size: 0.9rem;
+}
+.stButton button {
+    font-size: 0.9rem;
+    padding: 0.5em 1.2em;
+    border-radius: 6px;
+}
+
+/* Expander調整 */
+.streamlit-expanderHeader {
+    font-size: 0.9rem !important;
+    color: #444 !important;
+}
+
+/* 成功/注意メッセージのデザイン */
+.stSuccess, .stInfo, .stWarning {
+    font-size: 0.9rem;
+}
+
+/* 小さい画面時のフォント縮小 */
+@media (max-width: 480px) {
+    h1 { font-size: 1.3rem !important; }
+    h2, h3, .stSubheader { font-size: 1.05rem !important; }
+    p, .stMarkdown { font-size: 0.9rem; }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
+
 st.set_page_config(page_title="バイアス監査アプリ", layout="centered", initial_sidebar_state="collapsed")
 
 st.markdown("""
