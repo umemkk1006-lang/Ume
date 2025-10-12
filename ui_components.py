@@ -13,7 +13,6 @@ def hero(title: str, subtitle: str, cta_label: str, cta_anchor: str, variant: st
         </div>
         """, unsafe_allow_html=True
     )
- # --- 追加: _inject_css() 内のCSSに "ghost" ボタンスタイルを追加 ---
 def _inject_css():
     st.markdown(
         """

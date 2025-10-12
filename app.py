@@ -3,8 +3,11 @@ import json, os
 from datetime import datetime
 import pandas as pd
 import streamlit as st
-
 import streamlit as st
+
+import inspect, ui_components
+st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
+
 from ui_components import hero, info_cards, stepper
 # 既存ロジックは2ページ目で使う想定。ここは導入と入力のみ。
 
@@ -25,7 +28,6 @@ hero(
     cta_anchor="#bias_input",  # ← アンカー名を変更
     variant="ghost" ,
 )
-
 
 stepper(steps=["導入", "入力", "解析"], active=2)
 
