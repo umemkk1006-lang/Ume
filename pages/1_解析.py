@@ -6,6 +6,32 @@ from ui_components import stepper, result_badge, tip_card
 # 例）あなたの既存ロジック
 # from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
 import os, json
+
+# ===== 受け取った本文 =====
+text = st.session_state.get("user_input", "").strip()
+if not text:
+    st.info("トップページで内容を入力してください。")
+    st.page_link("app.py", label="← トップに戻る", icon="🏠")
+    st.stop()
+
+# ===== 前ページの「簡単AI」結果（別枠） =====
+ai_quick = st.session_state.get("ai_quick")
+if ai_quick:
+    with st.container(border=True):
+        st.caption("前ページのAI簡易解析（β）")
+        st.write(ai_quick.get("summary", ""))
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**AIが見つけた可能性のあるバイアス**")
+            for b in ai_quick.get("biases", []):
+                st.write(f"- **{b.get('name','?')}**（{b.get('score',0):.2f}）: {b.get('reason','')}")
+        with c2:
+            st.markdown("**バイアス低減のヒント**")
+            for tip in ai_quick.get("tips", []):
+                st.write("💡", tip)
+    st.divider()  # ここから下は通常の解析UI
+
 try:
     from openai import OpenAI
     _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))

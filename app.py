@@ -430,5 +430,25 @@ decision_text = st.text_area(
 opts_source = st.session_state.get("preview_opts_value") or st.session_state.get("main_options", "")
 selected = [o.strip() for o in opts_source.split(",") if o.strip()]
 
+st.divider()
+# 画面下に大きめの遷移ボタン
+colA, colB, colC = st.columns([1, 2, 1])
+with colB:
+    if st.button("バイアス解析ページへ ▶️", use_container_width=True):
+        # 入力欄の値を優先的に拾う（無ければ既存の user_input）
+        _text = (st.session_state.get("main_decision_text", "") or
+                 st.session_state.get("user_input", "")).strip()
+        _tag = st.session_state.get("context_tag", "")
+        _selected = st.session_state.get("selected", [])
+
+        if not _text:
+            st.warning("まずは上の入力欄に1行でも入力してください。")
+        else:
+            st.session_state["user_input"] = _text
+            st.session_state["context_tag"] = _tag
+            st.session_state["selected"] = _selected
+            # 簡単AIの結果は混ざらないように毎回クリア
+            st.session_state["ai_quick"] = None
+            st.switch_page("pages/1_解析.py")
 
 
