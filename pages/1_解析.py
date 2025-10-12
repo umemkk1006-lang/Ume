@@ -5,6 +5,8 @@ from ui_components import stepper, result_badge, tip_card
 
 st.set_page_config(page_title="解析 - Bias Audit Lab", page_icon="🧪", layout="wide")
 
+st.page_link("app.py", label="← トップへ戻る", icon="🏠")
+
 # 入力チェック
 text = st.session_state.get("user_input", "").strip()
 if not text:
@@ -20,6 +22,70 @@ if st.session_state.get("context_tag"):
     st.caption(f"カテゴリ: {st.session_state['context_tag']}")
 
 st.divider()
+
+# ========= 解析本体 =========
+def analyze_text(text: str, rules: dict, sensitivity: int):
+    text = (text or "").strip()
+    if not text:
+        return [], {}
+
+    # しきい値：1.20（厳）〜0.40（敏感）に線形可変
+    threshold = 1.20 - (sensitivity / 100) * 0.80
+
+    findings, debug_scores = [], {}
+
+    # 強シグナル（rules.json）+ 弱シグナル（SOFT_CUES）の合算スコア
+    for key, spec in rules.items():
+        score, evidences = 0.0, []
+        for kw in spec.get("keywords", []):
+            if kw and kw in text:
+                score += 1.0; evidences.append(kw)
+        for soft_kw in SOFT_CUES.get(key, []):
+            if soft_kw and soft_kw in text:
+                score += 0.5; evidences.append(soft_kw)
+
+        if score >= threshold:
+            conf = "A" if score >= (threshold + 0.8) else "B"
+            findings.append({
+                "type": key,
+                "label": spec.get("label", key),
+                "confidence": conf,
+                "evidence": evidences,
+                "suggestions": spec.get("interventions", []),
+                "score": round(score, 2)
+            })
+            debug_scores[spec.get("label", key)] = round(score, 2)
+
+    # 感情ヒューリスティック（弱い表現も拾う）
+    emo_hits = [w for w in EMOTION_WORDS if w in text]
+    emo_score = 0.5 * len(emo_hits)  # 1語=0.5点
+    if emo_score >= max(0.5, threshold * 0.6):
+        findings.append({
+            "type": "affect",
+            "label": "感情ヒューリスティック",
+            "confidence": "B" if emo_score < (threshold + 0.8) else "A",
+            "evidence": emo_hits,
+            "suggestions": [
+                "気持ちが落ち着いてから再評価（24時間ルール）",
+                "％や印象を金額・時間に置き換えて比較する",
+                "第三者の短評（外部視点）を3行で書く"
+            ],
+            "score": round(emo_score, 2)
+        })
+        debug_scores["感情ヒューリスティック"] = round(emo_score, 2)
+
+    findings.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    return findings, {"threshold": round(threshold, 2), "scores": debug_scores}
+
+def save_decision(row, path="decisions.csv"):
+    df_new = pd.DataFrame([row])
+    if os.path.exists(path):
+        df_old = pd.read_csv(path)
+        df = pd.concat([df_old, df_new], ignore_index=True)
+    else:
+        df = df_new
+    df.to_csv(path, index=False, encoding="utf-8-sig")
+
 
 if "プレモーテム" in selected:
     premortem = st.text_area("プレモーテム：最悪結果の主因Top3と予防策（各1行）", height=120, key="premortem")

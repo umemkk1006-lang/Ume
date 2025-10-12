@@ -21,9 +21,10 @@ for k, v in {
 hero(
     title="あなたの“思い込み”、AIで見抜ける？",
     subtitle="心理学×行動経済学で、あなたの判断に潜むバイアスをやさしく可視化します。",
-    cta_label="解析を試す",
-    cta_anchor="#start"
+    cta_label="すぐに解析する",
+    cta_anchor="#bias_input"   # ← アンカー名を変更
 )
+
 
 stepper(steps=["導入", "入力", "解析"], active=2)
 
@@ -51,8 +52,10 @@ info_cards([
 st.markdown("### 日常はバイアスだらけ")
 st.caption("ニュースの読み方、買い物、投資、進路や仕事の判断…“無意識のクセ”が入ります。だからこそ、いったん点検してみよう。")
 
-st.markdown("<div id='start'></div>", unsafe_allow_html=True)
+st.markdown("<div id='bias_input'></div>", unsafe_allow_html=True)
 st.markdown("## あなたの気になる話題、バイアスがかかってないか見てみる")
+
+
 
 with st.form("bias_input_form", clear_on_submit=False):
     topic = st.text_area(
@@ -194,70 +197,6 @@ SOFT_CUES["loss_aversion"] += ["逃したくない", "値上げ前に", "限定"
 SOFT_CUES["status_quo"]   += ["現状のまま", "いつも通り"]
 SOFT_CUES["anchoring"]    += ["割引前価格", "通常価格"]
 SOFT_CUES["sunk_cost"]    += ["もったいない", "ここまで続けた"]
-
-
-# ========= 解析本体 =========
-def analyze_text(text: str, rules: dict, sensitivity: int):
-    text = (text or "").strip()
-    if not text:
-        return [], {}
-
-    # しきい値：1.20（厳）〜0.40（敏感）に線形可変
-    threshold = 1.20 - (sensitivity / 100) * 0.80
-
-    findings, debug_scores = [], {}
-
-    # 強シグナル（rules.json）+ 弱シグナル（SOFT_CUES）の合算スコア
-    for key, spec in rules.items():
-        score, evidences = 0.0, []
-        for kw in spec.get("keywords", []):
-            if kw and kw in text:
-                score += 1.0; evidences.append(kw)
-        for soft_kw in SOFT_CUES.get(key, []):
-            if soft_kw and soft_kw in text:
-                score += 0.5; evidences.append(soft_kw)
-
-        if score >= threshold:
-            conf = "A" if score >= (threshold + 0.8) else "B"
-            findings.append({
-                "type": key,
-                "label": spec.get("label", key),
-                "confidence": conf,
-                "evidence": evidences,
-                "suggestions": spec.get("interventions", []),
-                "score": round(score, 2)
-            })
-            debug_scores[spec.get("label", key)] = round(score, 2)
-
-    # 感情ヒューリスティック（弱い表現も拾う）
-    emo_hits = [w for w in EMOTION_WORDS if w in text]
-    emo_score = 0.5 * len(emo_hits)  # 1語=0.5点
-    if emo_score >= max(0.5, threshold * 0.6):
-        findings.append({
-            "type": "affect",
-            "label": "感情ヒューリスティック",
-            "confidence": "B" if emo_score < (threshold + 0.8) else "A",
-            "evidence": emo_hits,
-            "suggestions": [
-                "気持ちが落ち着いてから再評価（24時間ルール）",
-                "％や印象を金額・時間に置き換えて比較する",
-                "第三者の短評（外部視点）を3行で書く"
-            ],
-            "score": round(emo_score, 2)
-        })
-        debug_scores["感情ヒューリスティック"] = round(emo_score, 2)
-
-    findings.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-    return findings, {"threshold": round(threshold, 2), "scores": debug_scores}
-
-def save_decision(row, path="decisions.csv"):
-    df_new = pd.DataFrame([row])
-    if os.path.exists(path):
-        df_old = pd.read_csv(path)
-        df = pd.concat([df_old, df_new], ignore_index=True)
-    else:
-        df = df_new
-    df.to_csv(path, index=False, encoding="utf-8-sig")
 
 # ========= ヘッダー =========
 
