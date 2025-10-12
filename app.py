@@ -4,6 +4,80 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+import streamlit as st
+from ui_components import hero, info_cards, stepper
+# 既存ロジックは2ページ目で使う想定。ここは導入と入力のみ。
+
+st.set_page_config(page_title="Bias Audit Lab", page_icon="🧠", layout="centered")
+
+# セッション初期化
+for k, v in {
+    "user_input": "",
+    "context_tag": "",
+}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+hero(
+    title="あなたの“思い込み”、AIで見抜ける？",
+    subtitle="心理学×行動経済学で、あなたの判断に潜むバイアスをやさしく可視化します。",
+    cta_label="解析を試す",
+    cta_anchor="#start"
+)
+
+stepper(steps=["導入", "入力", "解析"], active=2)
+
+st.markdown("### システム1・システム2って？")
+info_cards([
+    {
+        "icon": "⚡️",
+        "title": "システム1（直感）",
+        "desc": "速い・自動・省エネ。だけど思い込みの影響を受けやすい。"
+    },
+    {
+        "icon": "🧩",
+        "title": "システム2（熟考）",
+        "desc": "ゆっくり・論理的・エネルギー消費大。面倒でサボりがち。"
+    }
+])
+
+st.markdown("### 行動経済学って？")
+info_cards([
+    {"icon":"😵‍💫","title":"損失回避","desc":"同じ額でも、失う痛みは得る喜びの2倍。"},
+    {"icon":"🎯","title":"確証バイアス","desc":"自分の信じたい情報ばかり集めてしまう。"},
+    {"icon":"🏷️","title":"アンカリング","desc":"最初に見た数字が、その後の判断を引っ張る。"},
+])
+
+st.markdown("### 日常はバイアスだらけ")
+st.caption("ニュースの読み方、買い物、投資、進路や仕事の判断…“無意識のクセ”が入ります。だからこそ、いったん点検してみよう。")
+
+st.markdown("<div id='start'></div>", unsafe_allow_html=True)
+st.markdown("## あなたの気になる話題、バイアスがかかってないか見てみる")
+
+with st.form("bias_input_form", clear_on_submit=False):
+    topic = st.text_area(
+        "例：『このニュースは信じて良い？』『◯◯の株を買うべき？』『この口コミは当てになる？』",
+        height=120,
+        placeholder="自由に入力してください。要点だけでもOK。"
+    )
+    col1, col2 = st.columns([1,1])
+    with col1:
+        context_tag = st.selectbox(
+            "カテゴリ（任意）", ["未選択", "ニュース", "投資・お金", "キャリア・進路", "健康", "その他"]
+        )
+    with col2:
+        submit = st.form_submit_button("解析ページへ進む ▶️")
+
+if submit:
+    st.session_state["user_input"] = topic.strip()
+    st.session_state["context_tag"] = context_tag if context_tag != "未選択" else ""
+    if not st.session_state["user_input"]:
+        st.warning("まずは内容を1行でも入力してください。")
+    else:
+        # Streamlitの標準マルチページ遷移（pages/1_解析.pyが表示されます）
+        st.switch_page("pages/1_解析.py")
+
+
 # === モバイル最適化CSS ===
 st.markdown("""
 <style>
@@ -384,270 +458,4 @@ opts_source = st.session_state.get("preview_opts_value") or st.session_state.get
 selected = [o.strip() for o in opts_source.split(",") if o.strip()]
 
 
-if "プレモーテム" in selected:
-    premortem = st.text_area("プレモーテム：最悪結果の主因Top3と予防策（各1行）", height=120, key="premortem")
 
-if "外部視点" in selected:
-    cA, cB, cC = st.columns(3)
-    with cA: outside_A = st.text_area("Aさんの3行コメント", height=90, key="outside_A")
-    with cB: outside_B = st.text_area("Bさんの3行コメント", height=90, key="outside_B")
-    with cC: outside_C = st.text_area("Cさんの3行コメント", height=90, key="outside_C")
-
-if "ベースレート確認" in selected:
-    base_rate_source = st.text_input("出典URLや資料名（なければ『なし』）", value="", key="base_rate")
-
-if "フレーミング反転（％→円/損失）" in selected:
-    framing = st.text_input("反転後の表現（例：年◯円の損失に相当 など）", value="", key="framing")
-
-if "決定遅延（24h後に再確認）" in selected:
-    delay_24h = st.toggle("24時間後に再確認（端末側のリマインダ設定を推奨）", value=True, key="delay24h")
-
-c1, c2 = st.columns(2)
-with c1:
-    importance = st.slider("重要度", 0, 100, 50)
-with c2:
-    confidence_pre = st.slider("自信度（介入前）", 0, 100, 50)
-
-
-if st.button("解析する", type="primary"):
-    # ====== ここをあなたの解析処理に置き換え ======
-    # 例）findings = calc_findings(inputs)  # list を返す。未検出なら []
-    findings = []  # 仮：今回は未検出だったケース
-    debug_info = {"threshold": "-", "scores": {}}
-    # ================================================
-    st.session_state.findings = findings or []     # 空でもリストを保存
-    st.session_state.debug = debug_info
-    st.success("解析しました。下の結果をご確認ください。")
-
-
-# --- session_state の初期化 ---
-if "findings" not in st.session_state:
-    st.session_state.findings = None   # None=未実行, []=未検出, ["..."]=検出あり
-if "debug" not in st.session_state:
-    st.session_state.debug = {}
-
-# 確からしさ(A/B/C)を文字と説明に変換
-def confidence_letter(score: float):
-    if score >= 0.8:
-        return "A", "高い（かなり当てはまりそう）"
-    elif score >= 0.6:
-        return "B", "中くらい（それっぽいが他の可能性も）"
-    else:
-        return "C", "低め（参考程度）"
-
-# 1件分のカード表示
-def render_finding_card(f: dict):
-    label = f.get("label", "（名称未設定）")
-    score = float(f.get("score", 0.0) or 0.0)
-    letter, expl = confidence_letter(score)
-
-    with st.container(border=True):
-        st.markdown(f"**{label}**　|　確からしさ：**{letter}**（{expl}）")
-
-        ev = f.get("evidence") or []
-        if ev:
-            st.caption("根拠：" + "、".join(ev[:3]))
-        with st.expander("対処ヒントを見る"):
-            for s in f.get("suggestions", []):
-                st.markdown("- " + s)
-
-
-# ======== 3. 解析結果 ========
-st.header("3. 解析結果")
-
-findings = st.session_state.get("findings", None)  # ← 既定を None に
-dbg = st.session_state.get("debug", {})
-
-if findings is None:
-    # まだ解析を押していない
-    st.caption("（解析未実行）")
-
-elif len(findings) == 0:
-    # 解析はしたがヒットなし → ここで褒める＆次導線
-    st.success("🎉 今回は偏りは見つかりませんでした。落ち着いた判断ができていますね。")
-    st.info("次は「4. 介入の選択と記入」または「4️⃣ 支援介入」で、現実的な行動プランを作りましょう。")
-
-else:
-   for f in findings:
-    render_finding_card(f)
-
-# 4. =========介入の選択と記入=========
-
-st.header("4. 介入の選択と記入")
-
-# 既定値（無い場合は空）をセッションから取り出す（必要なら）
-_selected_default = st.session_state.get("selected", [])
-
-options = {
-    "外部視点": "第三者や未来の自分の視点で見直す",
-    "ベースレート確認": "統計や過去の確率に照らして再考する",
-    "フレーミング反転": "損得の表現を入れ替えて評価する",
-    "決定遅延": "24時間置いてから再評価する",
-    "プレモーテム": "失敗を仮定して原因と予防策を先に考える",
-}
-
-selected = st.multiselect(
-    "実施する介入（最大2つ）",
-    list(options.keys()),
-    max_selections=2,
-    default=_selected_default,
-    key="selected",
-    help="介入＝バイアスを中和する“思考アクション”です。"
-)
-
-for k in selected:
-    st.caption(f"ℹ️ {k}: {options[k]}")
-
-# プレモーテム選択時の入力欄
-if "プレモーテム" in selected:
-    st.write("🔍 プレモーテム：最悪結果の主因Top3と予防策（各1行）")
-    for i in range(1, 4):
-        st.text_input(f"主因{i}", placeholder="例：準備不足")
-        st.text_input(f"予防策{i}", placeholder="例：前日にチェックリスト作成")
-
-
-# -*- coding: utf-8 -*-
-# ================================
-# 4) 支援介入（現実的な対策）
-# ================================
-st.subheader("4️⃣ 支援介入（現実的な対策）")
-st.caption("不安を具体化すると、現実的な代替案や制度が見つかりやすくなります。")
-
-theme = st.text_input("いまの不安を一言で（例：教育費が心配、住宅ローン、老後が不安）")
-income = st.text_input("どのくらいの収入があれば安心？（例：月25万円）")
-years = st.number_input("老後まであと何年？", min_value=0, max_value=80, value=20, step=1)
-areas = st.multiselect(
-    "心配分野（複数選択可）",
-    ["教育費", "健康", "住宅ローン", "老後資金", "生活費", "仕事・収入の不安"]
-)
-
-def suggest_lines(theme_text: str, areas_selected: list, income_text: str, years_to_retire: int):
-    t = theme_text or ""
-    tags = set(areas_selected)
-
-    if ("教育" in t) or ("学費" in t) or ("塾" in t):
-        tags.add("教育費")
-    if ("住宅" in t) or ("ローン" in t) or ("家賃" in t):
-        tags.add("住宅ローン")
-    if ("老後" in t) or ("年金" in t) or ("退職" in t):
-        tags.add("老後資金")
-    if ("健康" in t) or ("医療" in t):
-        tags.add("健康")
-    if ("生活費" in t) or ("家計" in t) or ("節約" in t):
-        tags.add("生活費")
-    if ("収入" in t) or ("仕事" in t) or ("転職" in t) or ("副業" in t):
-        tags.add("仕事・収入の不安")
-
-    base = [
-        "支出の見える化：1日10分の家計記録で“見えない支出”を可視化する。",
-        "優先順位づけ：今月の『守る支出（必須）／減らす支出（調整）／やめる支出（不要）』を仕分けする。",
-        "自治体の相談窓口：お住まいの自治体サイトで生活・教育・住宅等の支援制度を一覧確認する。"
-    ]
-
-    bucket = {
-        "教育費": [
-            "就学援助・奨学金：自治体の就学援助、国・自治体の奨学金（無利子含む）を確認。",
-            "学びの代替：無料のオンライン教材・図書館講座・地域学習会を活用して学習効果を維持。",
-            "費用の平準化：年額イベント（受験・教材）を月割りで積立、臨時出費を平準化。"
-        ],
-        "住宅ローン": [
-            "控除や軽減：住宅ローン控除、固定資産税の減免・リフォーム補助の適用可否を確認。",
-            "返済見直し：金利タイプの見直し・借換え・返済期間の延長短縮の試算を家計アプリで実行。",
-            "住居費基準：手取りの25〜30%以内を目標に、基準超過なら契約条件の再交渉や住み替えも検討。"
-        ],
-        "老後資金": [
-            f"制度活用：iDeCo/つみたてNISAなど税優遇制度で長期積立。年金記録のねんきんネット確認。",
-            f"年数逆算：老後までの年数（例: {years_to_retire}年）で、月いくら積み立てればよいかを逆算。",
-            "つながり維持：地域活動・軽運動・学び直しで健康寿命と社会的つながりを確保。"
-        ],
-        "健康": [
-            "定期検診：自治体の無料/低額検診、健康相談の利用スケジュールを作成。",
-            "食・睡眠・運動：お金をかけない生活改善（自炊・就寝前のスマホ断ち・歩数目標）を実施。",
-            "医療費対策：高額療養費制度・自立支援医療などの対象可否を確認。"
-        ],
-        "生活費": [
-            "固定費：通信・保険・サブスクの見直しで月◯%削減を狙う。",
-            "変動費：食費は週単位の予算袋方式でコントロール（特売日×作り置き）。",
-            "公共サービス：図書館・公園・公共スポーツ施設を積極活用して娯楽費を置き換え。"
-        ],
-        "仕事・収入の不安": [
-            "収入の底上げ：社内の手当・資格手当・評価基準を確認。昇給の道筋を上司と合意。",
-            "小さな副業：週2〜3時間で始められるスキル販売/オンライン講座を試行（失敗コストを極小に）。",
-            "転職準備：職務経歴の棚卸し→求人票の要件差分を学習計画に変換（3か月単位）。"
-        ]
-    }
-
-    income_hint = []
-    if income_text:
-        income_hint.append(f"安心ライン（あなたの目安）：{income_text}。この数字を基準に、毎月の必要貯蓄や稼得計画を逆算。")
-
-    lines = []
-    for tag in tags:
-        if tag in bucket:
-            lines.extend(bucket[tag])
-
-    if not lines:
-        lines = base.copy()
-    else:
-        lines = base + lines
-
-    if income_hint:
-        lines = income_hint + lines
-
-    uniq = []
-    for x in lines:
-        if x not in uniq:
-            uniq.append(x)
-    return uniq[:6]
-
-if st.button("提案を表示"):
-    suggestions = suggest_lines(theme, areas, income, years)
-    st.markdown("💡 **あなたへの提案**")
-    for s in suggestions:
-        st.write("- " + s)
-    st.caption("※具体的な名称・要件はお住まいの自治体サイトで必ずご確認ください。")
-
-
-# ========= 5. 再評価 & 保存 =========
-st.header("5. 再評価と保存")
-confidence_post = st.slider("自信度（介入後）", 0, 100, 50)
-change_reason = st.text_input("自信が変化した理由（100字以内）", value="")
-
-if st.button("この意思決定を保存", use_container_width=True):
-    row = {
-        "decision_id": datetime.now().strftime("%Y%m%d%H%M%S"),
-        "timestamp": datetime.now().isoformat(),
-        "theme": theme, "situation": situation, "scenario": scenario,
-        "text": st.session_state.get("decision_text", ""),
-        "options": st.session_state.get("options_text", ""),
-        "importance": st.session_state.get("importance", 0),
-        "confidence_pre": st.session_state.get("confidence_pre", 0),
-        "biases": ";".join([f"{f['label']}:{f['confidence']}" for f in findings]) if findings else "",
-        "evidence": ";".join([",".join(f["evidence"]) for f in findings]) if findings else "",
-        "interventions": ";".join(selected),
-        "premortem": (premortem or "").replace("\n", " / "),
-        "outside_view_A": (outside_A or "").replace("\n", " / "),
-        "outside_view_B": (outside_B or "").replace("\n", " / "),
-        "outside_view_C": (outside_C or "").replace("\n", " / "),
-        "base_rate_source": base_rate_source,
-        "framing": framing,
-        "delay_24h": delay_24h,
-        "confidence_post": confidence_post,
-        "change_reason": change_reason
-    }
-    save_decision(row)
-    st.success("保存しました。下の『履歴』で確認できます。")
-
-# ========= 6. 履歴 =========
-st.header("6. 履歴")
-if os.path.exists("decisions.csv"):
-    df = pd.read_csv("decisions.csv")
-    st.dataframe(df, use_container_width=True, height=300)
-    st.download_button("CSVをダウンロード",
-                       data=df.to_csv(index=False).encode("utf-8-sig"),
-                       file_name="decisions.csv", mime="text/csv")
-else:
-    st.caption("まだ保存はありません。")
-
-st.divider()
-st.markdown("© Bias Audit MVP — 学習目的。高リスク判断は専門家の助言も併用してください。")
