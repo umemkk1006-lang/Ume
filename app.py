@@ -13,7 +13,7 @@ from ui_components import hero, info_cards, stepper
 
 st.set_page_config(page_title="Bias Audit Lab", page_icon="🧠", layout="centered")
 
-# セッション初期化
+# --- セッション初期化 ---
 for k, v in {
     "user_input": "",
     "context_tag": "",
@@ -21,12 +21,13 @@ for k, v in {
     if k not in st.session_state:
         st.session_state[k] = v
 
+# --- ヒーロー（ボタン文言やわらかく＋ゴーストボタン）---
 hero(
     title="あなたの“思い込み”、AIで見抜ける？",
     subtitle="心理学×行動経済学で、あなたの判断に潜むバイアスをやさしく可視化します。",
-    cta_label="入力に進む",
-    cta_anchor="#bias_input",  # ← アンカー名を変更
-    variant="ghost" ,
+    cta_label="解析入力に進む",   # ← 文言
+    cta_anchor="#bias_input",     # ← アンカー
+    variant="ghost",              
 )
 
 stepper(steps=["導入", "入力", "解析"], active=2)
