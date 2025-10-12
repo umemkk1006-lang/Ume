@@ -1,11 +1,11 @@
 import streamlit as st
 
 selected = st.session_state.get("selected", [])  
+import os, json
+import pandas as pd
 
 from ui_components import stepper, result_badge, tip_card
-# 例）あなたの既存ロジック
 # from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
-import os, json
 
 # ===== 受け取った本文 =====
 text = st.session_state.get("user_input", "").strip()

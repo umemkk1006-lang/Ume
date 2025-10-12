@@ -3,7 +3,6 @@ import json, os
 from datetime import datetime
 import pandas as pd
 import streamlit as st
-import streamlit as st
 
 import inspect, ui_components
 st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
