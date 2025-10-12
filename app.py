@@ -22,8 +22,8 @@ hero(
     title="あなたの“思い込み”、AIで見抜ける？",
     subtitle="心理学×行動経済学で、あなたの判断に潜むバイアスをやさしく可視化します。",
     cta_label="入力に進む",
-    cta_anchor="#bias_input"   # ← アンカー名を変更
-    variant="ghost" 
+    cta_anchor="#bias_input",  # ← アンカー名を変更
+    variant="ghost" ,
 )
 
 
