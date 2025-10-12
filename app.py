@@ -408,18 +408,6 @@ with c1:
 with c2:
     confidence_pre = st.slider("自信度（介入前）", 0, 100, 50)
 
-if st.button("解析する", type="primary", use_container_width=True):
-    if not decision_text.strip():
-        st.warning("本文を入力してください（上の『反映』ボタンが便利です）")
-    else:
-        findings, dbg = analyze_text(decision_text, rules, sensitivity)
-        st.session_state["findings"] = findings
-        st.session_state["debug"] = dbg
-        st.session_state["decision_text"] = decision_text
-        st.session_state["options_text"] = st.session_state.get("preview_opts_value", "")
-        st.session_state["importance"] = importance
-        st.session_state["confidence_pre"] = confidence_pre
-        st.success("解析しました。下の結果をご確認ください。")
 
 if st.button("解析する", type="primary"):
     # ====== ここをあなたの解析処理に置き換え ======
@@ -438,9 +426,34 @@ if "findings" not in st.session_state:
 if "debug" not in st.session_state:
     st.session_state.debug = {}
 
+# 確からしさ(A/B/C)を文字と説明に変換
+def confidence_letter(score: float):
+    if score >= 0.8:
+        return "A", "高い（かなり当てはまりそう）"
+    elif score >= 0.6:
+        return "B", "中くらい（それっぽいが他の可能性も）"
+    else:
+        return "C", "低め（参考程度）"
 
-# ======== 3. バイアス検知（候補） ========
-st.header("3. バイアス検知（候補）")
+# 1件分のカード表示
+def render_finding_card(f: dict):
+    label = f.get("label", "（名称未設定）")
+    score = float(f.get("score", 0.0) or 0.0)
+    letter, expl = confidence_letter(score)
+
+    with st.container(border=True):
+        st.markdown(f"**{label}**　|　確からしさ：**{letter}**（{expl}）")
+
+        ev = f.get("evidence") or []
+        if ev:
+            st.caption("根拠：" + "、".join(ev[:3]))
+        with st.expander("対処ヒントを見る"):
+            for s in f.get("suggestions", []):
+                st.markdown("- " + s)
+
+
+# ======== 3. 解析結果 ========
+st.header("3. 解析結果")
 
 findings = st.session_state.get("findings", None)  # ← 既定を None に
 dbg = st.session_state.get("debug", {})
@@ -455,18 +468,8 @@ elif len(findings) == 0:
     st.info("次は「4. 介入の選択と記入」または「4️⃣ 支援介入」で、現実的な行動プランを作りましょう。")
 
 else:
-    # ヒットあり → 既存の詳細表示ロジックをここに
-    st.caption(f"内部しきい値: {dbg.get('threshold','-')} / スコア: {dbg.get('scores',{})}")
-    for f in findings:
-        with st.container(border=True):
-            st.subheader(f"{f['label']}（確度:{f.get('confidence')}）")
-            if f.get("score") is not None:
-                st.caption(f"内部スコア: {f['score']}")
-            st.write("根拠: " + "、".join(f.get("evidence", [])) if f.get("evidence") else "（自動推定）")
-            with st.expander("このバイアスへの介入案を表示"):
-                for s in f.get("suggestions", []):
-                    st.markdown(f"- {s}")
-
+   for f in findings:
+    render_finding_card(f)
 
 # 4. =========介入の選択と記入=========
 
