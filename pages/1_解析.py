@@ -1,7 +1,42 @@
 import streamlit as st
+
+selected = st.session_state.get("selected", [])  
+
 from ui_components import stepper, result_badge, tip_card
 # 例）あなたの既存ロジック
 # from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
+import os, json
+try:
+    from openai import OpenAI
+    _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+except Exception:
+    _openai_client = None
+
+def analyze_with_ai(text: str):
+    """
+    入力テキストをLLMに渡し、バイアス解説をJSONで受け取る。
+    返り値: dict {summary, biases:[{name,score,reason}], tips:[...]}
+    """
+    if not _openai_client:
+        return None
+
+    system = "あなたは行動経済学と認知心理学に詳しいアナリストです。過度な断定は避け、丁寧に説明してください。"
+    user = f"""
+以下の文章について、含まれる可能性のあるバイアスを特定し、JSONで返してください。
+- biases: [{'{'}"name": バイアス名, "score": 0~1, "reason": 簡潔な根拠{'}'}]
+- tips: バイアス低減の実践的アドバイスを3~5個
+- summary: 2〜3文の要約
+文章: <<< {text} >>>
+    """
+    resp = _openai_client.chat.completions.create(
+        model="gpt-4o-mini",  # 例：軽量・安価モデル
+        messages=[{"role":"system", "content":system},
+                  {"role":"user", "content":user}],
+        response_format={"type":"json_object"},
+        temperature=0.2,
+    )
+    data = json.loads(resp.choices[0].message.content)
+    return data
 
 st.set_page_config(page_title="解析 - Bias Audit Lab", page_icon="🧪", layout="wide")
 
@@ -121,7 +156,6 @@ if st.button("解析する", type="primary"):
     st.session_state.findings = findings or []     # 空でもリストを保存
     st.session_state.debug = debug_info
     st.success("解析しました。下の結果をご確認ください。")
-
 
 # --- session_state の初期化 ---
 if "findings" not in st.session_state:

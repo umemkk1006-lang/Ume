@@ -1,16 +1,42 @@
 import streamlit as st
 
-def hero(title: str, subtitle: str, cta_label: str, cta_anchor: str):
+
+    # --- 追加: hero に variant 引数を足す ---
+def hero(title: str, subtitle: str, cta_label: str, cta_anchor: str, variant: str = "primary"):
+    btn_cls = "cta" if variant == "primary" else "cta ghost"
     st.markdown(
         f"""
         <div class="hero">
           <h1>{title}</h1>
           <p class="sub">{subtitle}</p>
-          <a href="{cta_anchor}" class="cta">{cta_label}</a>
+          <a href="{cta_anchor}" class="{btn_cls}">{cta_label}</a>
         </div>
         """, unsafe_allow_html=True
     )
-    _inject_css()
+ # --- 追加: _inject_css() 内のCSSに "ghost" ボタンスタイルを追加 ---
+def _inject_css():
+    st.markdown(
+        """
+        <style>
+        .hero a.cta {
+            display: inline-block;
+            padding: .6rem 1rem;
+        }
+
+        .hero a.cta.ghost {
+            background: transparent;
+            border: 1px solid #cfe8df;
+            color: #2c6a57;
+            font-weight: 500;
+            padding: .5rem .9rem;
+            text-decoration: none;
+            border-radius: .6rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 def info_cards(items):
     cols = st.columns(len(items))
