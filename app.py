@@ -145,31 +145,32 @@ with st.form("bias_input_form", clear_on_submit=False):
     with col2:
         submit = st.form_submit_button("AIで解析する")
 
+submit = st.form_submit_button("AIで解析する")
+import analyze
+# --- 解析処理と結果表示 ---
+if submit:  # ← 「AIで解析する」ボタンが押されたとき
+    if not topic.strip():
+        st.warning("内容を入力してください。")
+    else:
+        with st.spinner("AIが解析中です..."):
+            ai_result = analyze_with_ai(topic)  # ← 既存関数を利用 or 新規追加
 
-# --- 入力欄のすぐ下に AI 簡易解析（β） ---
-with st.expander("AIで簡易解析（β）", expanded=False):
-    # 接続インジケータ
-    st.caption(f"接続状態: {'✅ APIキー=OK' if _openai_client else '⚠️ 未設定'}")
+        # 結果をセッションに保存
+        st.session_state["ai_result"] = ai_result
 
-    if st.button("このボタン要らない", key="ai_quick_btn"):
-        with st.spinner("AIが解析中…"):
-            st.session_state["ai_quick"] = analyze_with_ai(st.session_state.get("user_input",""))
+# --- 結果表示 ---
+if "ai_result" in st.session_state:
+    st.markdown("---")
+    st.subheader("AI解析結果")
+    st.markdown(
+        f"""
+        <div style='padding:1em; background-color:#f9f9f9; border-radius:8px;'>
+        {st.session_state["ai_result"]}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    ai_quick = st.session_state.get("ai_quick")
-    if ai_quick:
-        st.subheader("AIサマリー")
-        st.write(ai_quick.get("summary",""))
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**AIが見つけた可能性のあるバイアス**")
-            for b in ai_quick.get("biases", []):
-                st.write(f"• **{b.get('name','?')}**（{b.get('score',0):.2f}）")
-                st.caption(b.get("reason",""))
-        with c2:
-            st.markdown("**バイアス低減のヒント**")
-            for tip in ai_quick.get("tips", []):
-                st.write("💡", tip)
 
 # === モバイル最適化CSS ===
 st.markdown("""
