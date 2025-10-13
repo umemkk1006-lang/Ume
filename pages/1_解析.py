@@ -117,13 +117,25 @@ if "フレーミング反転（％→円/損失）" in selected:
 if "決定遅延（24h後に再確認）" in selected:
     delay_24h = st.toggle("24時間後に再確認（端末側のリマインダ設定を推奨）", value=True, key="delay24h")
 
+options = ["プレモーテム", "外部視点", "ベースレート確認", "フレーミング反転"]
+selected = st.multiselect("解析オプション（任意）", options, default=[])
+# 送信時:
+if submit:
+    st.session_state["user_input"] = topic.strip()
+    st.session_state["context_tag"] = context_tag if context_tag != "未選択" else ""
+    st.session_state["selected"] = selected             # 
+    if not st.session_state["user_input"]:
+        st.warning("まずは内容を1行でも入力してください。")
+    else:
+        # Streamlitの標準マルチページ遷移（pages/1_解析.pyが表示されます）
+        st.switch_page("pages/1_解析.py")
+
 c1, c2 = st.columns(2)
 with c1:
     importance = st.slider("重要度", 0, 100, 50)
 with c2:
     confidence_pre = st.slider("自信度（介入前）", 0, 100, 50)
-
-
+    
 if st.button("解析する", type="primary"):
     # ====== ここをあなたの解析処理に置き換え ======
     # 例）findings = calc_findings(inputs)  # list を返す。未検出なら []

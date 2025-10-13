@@ -62,14 +62,17 @@ for k, v in {
     if k not in st.session_state:
         st.session_state[k] = v
 
-# --- ヒーロー（ボタン文言やわらかく＋ゴーストボタン）---
+# hero は見出しだけにして、CTAは付けない
 hero(
     title="あなたの“思い込み”、AIで見抜ける？",
     subtitle="心理学×行動経済学のレンズで振り返るミニツール",
-    cta_label="解析入力に進む",   # ← 文言
-    cta_anchor="pages/1_解析.py",    
-    variant="ghost"          
+    cta_label=None,   # ← または省略
+    cta_anchor=None,
+    variant="ghost",
 )
+
+if st.button("解析入力に進む", type="primary"):
+    st.switch_page("pages/1_解析.py")
 
 
 stepper(steps=["導入", "入力", "解析"], active=2)
@@ -142,27 +145,15 @@ with st.form("bias_input_form", clear_on_submit=False):
             "カテゴリ（任意）", ["未選択", "ニュース", "投資・お金", "キャリア・進路", "健康", "その他"]
         )
     with col2:
-        submit = st.form_submit_button("解析ページへ進む ▶️")
+        submit = st.form_submit_button("AIで解析する")
 
-options = ["プレモーテム", "外部視点", "ベースレート確認", "フレーミング反転"]
-selected = st.multiselect("解析オプション（任意）", options, default=[])
-# 送信時:
-if submit:
-    st.session_state["user_input"] = topic.strip()
-    st.session_state["context_tag"] = context_tag if context_tag != "未選択" else ""
-    st.session_state["selected"] = selected             # 
-    if not st.session_state["user_input"]:
-        st.warning("まずは内容を1行でも入力してください。")
-    else:
-        # Streamlitの標準マルチページ遷移（pages/1_解析.pyが表示されます）
-        st.switch_page("pages/1_解析.py")
-        
+
 # --- 入力欄のすぐ下に AI 簡易解析（β） ---
 with st.expander("AIで簡易解析（β）", expanded=False):
     # 接続インジケータ
     st.caption(f"接続状態: {'✅ APIキー=OK' if _openai_client else '⚠️ 未設定'}")
 
-    if st.button("AIで解析する", key="ai_quick_btn"):
+    if st.button("このボタン要らない", key="ai_quick_btn"):
         with st.spinner("AIが解析中…"):
             st.session_state["ai_quick"] = analyze_with_ai(st.session_state.get("user_input",""))
 
