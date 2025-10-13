@@ -66,8 +66,6 @@ for k, v in {
 hero(
     title="あなたの“思い込み”、AIで見抜ける？",
     subtitle="心理学×行動経済学のレンズで振り返るミニツール",
-    cta_label=None,   # ← または省略
-    cta_anchor=None,
     variant="ghost",
 )
 
