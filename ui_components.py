@@ -1,18 +1,31 @@
 import streamlit as st
 
+# ui_components.py
+import streamlit as st
 
-    # --- 追加: hero に variant 引数を足す ---
-def hero(title: str, subtitle: str, cta_label: str | None = None, cta_anchor: str | None = None, variant: str = "primary"):
-    btn_cls = "cta" if variant == "primary" else "cta ghost"
+def hero(
+    title: str,
+    subtitle: str,
+    cta_label: str | None = None,   # ← デフォルト None
+    cta_anchor: str | None = None,  # ← デフォルト None
+    variant: str = "primary",
+):
+    btn_html = ""
+    if cta_label and cta_anchor:
+        btn_cls = "cta" if variant == "primary" else "cta ghost"
+        btn_html = f'<a href="{cta_anchor}" class="{btn_cls}">{cta_label}</a>'
+
     st.markdown(
         f"""
         <div class="hero">
           <h1>{title}</h1>
           <p class="sub">{subtitle}</p>
-          <a href="{cta_anchor}" class="{btn_cls}">{cta_label}</a>
+          {btn_html}
         </div>
-        """, unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
+
 def _inject_css():
     st.markdown(
         """
