@@ -48,6 +48,29 @@ def analyze_with_ai(text: str):
         # 例: RateLimitError など
         st.warning(f"AI解析エラー: {type(e).__name__}")
         return None
+
+from ui_components import hero, info_cards, stepper
+# 既存ロジックは2ページ目で使う想定。ここは導入と入力のみ。
+
+st.set_page_config(page_title="Bias Audit Lab", page_icon="🧠", layout="centered")
+
+# --- セッション初期化 ---
+for k, v in {
+    "user_input": "",
+    "context_tag": "",
+}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+# --- ヒーロー（ボタン文言やわらかく＋ゴーストボタン）---
+hero(
+    title="あなたの“思い込み”、AIで見抜ける？",
+    subtitle="心理学×行動経済学のレンズで振り返るミニツール",
+    cta_label="解析入力に進む",   # ← 文言
+    cta_anchor="pages/1_解析.py",    
+    variant="ghost"          
+)
+
 # --- 入力欄のすぐ下に AI 簡易解析（β） ---
 with st.expander("AIで簡易解析（β）", expanded=False):
     # 接続インジケータ
@@ -72,28 +95,6 @@ with st.expander("AIで簡易解析（β）", expanded=False):
             st.markdown("**バイアス低減のヒント**")
             for tip in ai_quick.get("tips", []):
                 st.write("💡", tip)
-
-from ui_components import hero, info_cards, stepper
-# 既存ロジックは2ページ目で使う想定。ここは導入と入力のみ。
-
-st.set_page_config(page_title="Bias Audit Lab", page_icon="🧠", layout="centered")
-
-# --- セッション初期化 ---
-for k, v in {
-    "user_input": "",
-    "context_tag": "",
-}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-
-# --- ヒーロー（ボタン文言やわらかく＋ゴーストボタン）---
-hero(
-    title="あなたの“思い込み”、AIで見抜ける？",
-    subtitle="心理学×行動経済学のレンズで振り返るミニツール",
-    cta_label="解析入力に進む",   # ← 文言
-    cta_anchor="pages/1_解析.py",    
-    variant="ghost"          
-)
 
 stepper(steps=["導入", "入力", "解析"], active=2)
 
