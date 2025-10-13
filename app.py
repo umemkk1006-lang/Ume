@@ -71,30 +71,6 @@ hero(
     variant="ghost"          
 )
 
-# --- 入力欄のすぐ下に AI 簡易解析（β） ---
-with st.expander("AIで簡易解析（β）", expanded=False):
-    # 接続インジケータ
-    st.caption(f"接続状態: {'✅ APIキー=OK' if _openai_client else '⚠️ 未設定'}")
-
-    if st.button("AIで解析する", key="ai_quick_btn"):
-        with st.spinner("AIが解析中…"):
-            st.session_state["ai_quick"] = analyze_with_ai(st.session_state.get("user_input",""))
-
-    ai_quick = st.session_state.get("ai_quick")
-    if ai_quick:
-        st.subheader("AIサマリー")
-        st.write(ai_quick.get("summary",""))
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**AIが見つけた可能性のあるバイアス**")
-            for b in ai_quick.get("biases", []):
-                st.write(f"• **{b.get('name','?')}**（{b.get('score',0):.2f}）")
-                st.caption(b.get("reason",""))
-        with c2:
-            st.markdown("**バイアス低減のヒント**")
-            for tip in ai_quick.get("tips", []):
-                st.write("💡", tip)
 
 stepper(steps=["導入", "入力", "解析"], active=2)
 
@@ -180,7 +156,31 @@ if submit:
     else:
         # Streamlitの標準マルチページ遷移（pages/1_解析.pyが表示されます）
         st.switch_page("pages/1_解析.py")
+        
+# --- 入力欄のすぐ下に AI 簡易解析（β） ---
+with st.expander("AIで簡易解析（β）", expanded=False):
+    # 接続インジケータ
+    st.caption(f"接続状態: {'✅ APIキー=OK' if _openai_client else '⚠️ 未設定'}")
 
+    if st.button("AIで解析する", key="ai_quick_btn"):
+        with st.spinner("AIが解析中…"):
+            st.session_state["ai_quick"] = analyze_with_ai(st.session_state.get("user_input",""))
+
+    ai_quick = st.session_state.get("ai_quick")
+    if ai_quick:
+        st.subheader("AIサマリー")
+        st.write(ai_quick.get("summary",""))
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**AIが見つけた可能性のあるバイアス**")
+            for b in ai_quick.get("biases", []):
+                st.write(f"• **{b.get('name','?')}**（{b.get('score',0):.2f}）")
+                st.caption(b.get("reason",""))
+        with c2:
+            st.markdown("**バイアス低減のヒント**")
+            for tip in ai_quick.get("tips", []):
+                st.write("💡", tip)
 
 # === モバイル最適化CSS ===
 st.markdown("""
