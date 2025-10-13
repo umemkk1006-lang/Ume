@@ -145,7 +145,7 @@ with st.form("bias_input_form", clear_on_submit=False):
     with col2:
         submit = st.form_submit_button("AIで解析する")
 
-submit = st.form_submit_button("AIで解析する")
+
 # --- 解析処理と結果表示 ---
 if submit:  # 「AIで解析する」ボタンが押されたとき
     if not topic.strip():
