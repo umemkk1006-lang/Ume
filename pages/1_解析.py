@@ -26,26 +26,6 @@ if not text:
     st.page_link("app.py", label="← トップに戻る", icon="🏠")
     st.stop()
 
-with st.expander("AIで詳細解析（β）", expanded=False):
-    # 接続状況のミニ表示（デバッグに便利）
-    st.caption("接続状態: " + ("✅ APIキーOK" if _openai_client else "⚠️ APIキー未設定"))
-    if st.button("AIで解析する"):
-        with st.spinner("AIが解析中…"):
-            ai = analyze_with_ai(st.session_state.get("user_input", ""))
-        if ai is None:
-            st.warning("APIキーが未設定のため、AI解析は実行できません。右下『Manage app → Secrets』で OPENAI_API_KEY を設定してください。")
-        else:
-            st.subheader("AIサマリー")
-            st.write(ai.get("summary", ""))
-
-            st.subheader("AIが見つけた可能性のあるバイアス")
-            for b in ai.get("biases", []):
-                st.write(f"- **{b.get('name','?')}**（{b.get('score',0):.2f}）: {b.get('reason','')}")
-            st.subheader("バイアス低減のヒント")
-            for tip in ai.get("tips", []):
-                st.write("🧠 ", tip)
-
-
 stepper(steps=["導入", "入力", "解析"], active=3)
 
 st.markdown("### 入力内容")

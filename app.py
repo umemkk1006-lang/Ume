@@ -8,7 +8,6 @@ import inspect, ui_components
 st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
 
 # --- AIクライアント & 簡易解析 ---
-import os, json
 from openai import OpenAI
 
 def _get_openai_client():
