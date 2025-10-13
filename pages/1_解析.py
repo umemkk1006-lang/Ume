@@ -3,18 +3,8 @@ import streamlit as st
 selected = st.session_state.get("selected", [])  
 import os, json
 import pandas as pd
-from openai import OpenAI
-def _get_openai_client():
-    # Streamlit Cloudの Secrets または環境変数のどちらかから取得
-    key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not key:
-        return None
-    try:
-        return OpenAI(api_key=key)
-    except Exception:
-        return None
 
-_openai_client = _get_openai_client()
+
 from ui_components import stepper, result_badge, tip_card
 # from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
 
@@ -24,63 +14,6 @@ if not text:
     st.info("トップページで内容を入力してください。")
     st.page_link("app.py", label="← トップに戻る", icon="🏠")
     st.stop()
-
-# ===== 前ページの「簡単AI」結果（別枠） =====
-ai_quick = st.session_state.get("ai_quick")
-if ai_quick:
-    with st.container(border=True):
-        st.caption("前ページのAI簡易解析（β）")
-        st.write(ai_quick.get("summary", ""))
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**AIが見つけた可能性のあるバイアス**")
-            for b in ai_quick.get("biases", []):
-                st.write(f"- **{b.get('name','?')}**（{b.get('score',0):.2f}）: {b.get('reason','')}")
-        with c2:
-            st.markdown("**バイアス低減のヒント**")
-            for tip in ai_quick.get("tips", []):
-                st.write("💡", tip)
-    st.divider()  # ここから下は通常の解析UI
-
-try:
-    # ✅ 環境変数または Streamlit Secrets から自動的にAPIキーを取得
-    import os
-    import streamlit as st
-    from openai import OpenAI
-
-    api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-    _openai_client = OpenAI(api_key=api_key) if api_key else None
-
-except Exception as e:
-    _openai_client = None
-
-
-def analyze_with_ai(text: str):
-    """
-    入力テキストをLLMに渡し、バイアス解説をJSONで受け取る。
-    返り値: dict {summary, biases:[{name,score,reason}], tips:[...]}
-    """
-    if not _openai_client:
-        return None
-
-    system = "あなたは行動経済学と認知心理学に詳しいアナリストです。過度な断定は避け、丁寧に説明してください。"
-    user = f"""
-以下の文章について、含まれる可能性のあるバイアスを特定し、JSONで返してください。
-- biases: [{'{'}"name": バイアス名, "score": 0~1, "reason": 簡潔な根拠{'}'}]
-- tips: バイアス低減の実践的アドバイスを3~5個
-- summary: 2〜3文の要約
-文章: <<< {text} >>>
-    """
-    resp = _openai_client.chat.completions.create(
-        model="gpt-4o-mini",  # 例：軽量・安価モデル
-        messages=[{"role":"system", "content":system},
-                  {"role":"user", "content":user}],
-        response_format={"type":"json_object"},
-        temperature=0.2,
-    )
-    data = json.loads(resp.choices[0].message.content)
-    return data
 
 st.set_page_config(page_title="解析 - Bias Audit Lab", page_icon="🧪", layout="wide")
 

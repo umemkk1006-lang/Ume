@@ -7,6 +7,73 @@ import streamlit as st
 import inspect, ui_components
 st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
 
+# --- AIクライアント & 簡易解析 ---
+import os, json
+from openai import OpenAI
+
+def _get_openai_client():
+    # Streamlit Secrets → 環境変数の順で見る
+    key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+    try:
+        return OpenAI(api_key=key)
+    except Exception:
+        return None
+
+_openai_client = _get_openai_client()
+
+def analyze_with_ai(text: str):
+    """テキストをLLMに渡してJSONで返す（簡易解析）"""
+    if not _openai_client or not text.strip():
+        return None
+
+    system = (
+        "あなたは行動経済学と認知心理学に詳しいアナリストです。"
+        "ダニエル・カーネマンのシステム1/2に言及しつつ、"
+        "可能性のあるバイアスを特定し、JSONで返して下さい。"
+        '返却形式: {"summary": "...", "biases":[{"name":"…","score":0-1,"reason":"…"}], "tips":["…","…"]}'
+    )
+    user = f"対象テキスト:\n<<< {text} >>>"
+
+    try:
+        resp = _openai_client.chat.completions.create(
+            model="gpt-4o-mini",              # ※明日 gpt-3.5 などへ切替検討OK
+            messages=[{"role":"system","content":system},
+                      {"role":"user","content":user}],
+            response_format={"type":"json_object"},
+            temperature=0.2,
+        )
+        return json.loads(resp.choices[0].message.content)
+    except Exception as e:
+        # 例: RateLimitError など
+        st.warning(f"AI解析エラー: {type(e).__name__}")
+        return None
+# --- 入力欄のすぐ下に AI 簡易解析（β） ---
+with st.expander("AIで簡易解析（β）", expanded=False):
+    # 接続インジケータ
+    st.caption(f"接続状態: {'✅ APIキー=OK' if _openai_client else '⚠️ 未設定'}")
+
+    if st.button("AIで解析する", key="ai_quick_btn"):
+        with st.spinner("AIが解析中…"):
+            st.session_state["ai_quick"] = analyze_with_ai(st.session_state.get("user_input",""))
+
+    ai_quick = st.session_state.get("ai_quick")
+    if ai_quick:
+        st.subheader("AIサマリー")
+        st.write(ai_quick.get("summary",""))
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**AIが見つけた可能性のあるバイアス**")
+            for b in ai_quick.get("biases", []):
+                st.write(f"• **{b.get('name','?')}**（{b.get('score',0):.2f}）")
+                st.caption(b.get("reason",""))
+        with c2:
+            st.markdown("**バイアス低減のヒント**")
+            for tip in ai_quick.get("tips", []):
+                st.write("💡", tip)
+
 from ui_components import hero, info_cards, stepper
 # 既存ロジックは2ページ目で使う想定。ここは導入と入力のみ。
 
@@ -23,10 +90,10 @@ for k, v in {
 # --- ヒーロー（ボタン文言やわらかく＋ゴーストボタン）---
 hero(
     title="あなたの“思い込み”、AIで見抜ける？",
-    subtitle="心理学×行動経済学で、あなたの判断に潜むバイアスをやさしく可視化します。",
+    subtitle="心理学×行動経済学のレンズで振り返るミニツール",
     cta_label="解析入力に進む",   # ← 文言
-    cta_anchor="#bias_input",     # ← アンカー
-    variant="ghost",              
+    cta_anchor="pages/1_解析.py",    
+    variant="ghost"          
 )
 
 stepper(steps=["導入", "入力", "解析"], active=2)
