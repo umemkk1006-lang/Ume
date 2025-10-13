@@ -6,8 +6,8 @@ import streamlit as st
 def hero(
     title: str,
     subtitle: str,
-    cta_label: str | None = None,   # ← デフォルト None
-    cta_anchor: str | None = None,  # ← デフォルト None
+    cta_label: str = None,   # ← デフォルト None
+    cta_anchor: str = None,  # ← デフォルト None
     variant: str = "primary",
 ):
     btn_html = ""
