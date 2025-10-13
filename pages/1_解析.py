@@ -4,6 +4,8 @@ selected = st.session_state.get("selected", [])
 import os, json
 import pandas as pd
 
+from openai import OpenAI
+
 from ui_components import stepper, result_badge, tip_card
 # from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
 
@@ -33,8 +35,8 @@ if ai_quick:
     st.divider()  # ここから下は通常の解析UI
 
 try:
-    from openai import OpenAI
-    _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # 環境変数 OPENAI_API_KEY を自動で読む（手動で渡すなら OpenAI(api_key=...) でもOK）
+    _openai_client = OpenAI()
 except Exception:
     _openai_client = None
 
