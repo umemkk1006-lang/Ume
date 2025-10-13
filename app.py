@@ -146,14 +146,13 @@ with st.form("bias_input_form", clear_on_submit=False):
         submit = st.form_submit_button("AIで解析する")
 
 submit = st.form_submit_button("AIで解析する")
-import analyze
 # --- 解析処理と結果表示 ---
-if submit:  # ← 「AIで解析する」ボタンが押されたとき
+if submit:  # 「AIで解析する」ボタンが押されたとき
     if not topic.strip():
         st.warning("内容を入力してください。")
     else:
         with st.spinner("AIが解析中です..."):
-            ai_result = analyze_with_ai(topic)  # ← 既存関数を利用 or 新規追加
+            ai_result = analyze_with_ai(topic)  # ← ここでAI解析関数を呼び出す
 
         # 結果をセッションに保存
         st.session_state["ai_result"] = ai_result
@@ -162,14 +161,7 @@ if submit:  # ← 「AIで解析する」ボタンが押されたとき
 if "ai_result" in st.session_state:
     st.markdown("---")
     st.subheader("AI解析結果")
-    st.markdown(
-        f"""
-        <div style='padding:1em; background-color:#f9f9f9; border-radius:8px;'>
-        {st.session_state["ai_result"]}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown(st.session_state["ai_result"])
 
 
 # === モバイル最適化CSS ===
