@@ -2,7 +2,7 @@ import streamlit as st
 
 
     # --- 追加: hero に variant 引数を足す ---
-def hero(title: str, subtitle: str, cta_label: str, cta_anchor: str, variant: str = "primary"):
+def hero(title: str, subtitle: str, cta_label: str | None = None, cta_anchor: str | None = None, variant: str = "primary"):
     btn_cls = "cta" if variant == "primary" else "cta ghost"
     st.markdown(
         f"""
