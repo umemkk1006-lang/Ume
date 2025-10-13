@@ -3,9 +3,18 @@ import streamlit as st
 selected = st.session_state.get("selected", [])  
 import os, json
 import pandas as pd
-
 from openai import OpenAI
+def _get_openai_client():
+    # Streamlit Cloudの Secrets または環境変数のどちらかから取得
+    key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+    try:
+        return OpenAI(api_key=key)
+    except Exception:
+        return None
 
+_openai_client = _get_openai_client()
 from ui_components import stepper, result_badge, tip_card
 # from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
 
@@ -35,10 +44,17 @@ if ai_quick:
     st.divider()  # ここから下は通常の解析UI
 
 try:
-    # 環境変数 OPENAI_API_KEY を自動で読む（手動で渡すなら OpenAI(api_key=...) でもOK）
-    _openai_client = OpenAI()
-except Exception:
+    # ✅ 環境変数または Streamlit Secrets から自動的にAPIキーを取得
+    import os
+    import streamlit as st
+    from openai import OpenAI
+
+    api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    _openai_client = OpenAI(api_key=api_key) if api_key else None
+
+except Exception as e:
     _openai_client = None
+
 
 def analyze_with_ai(text: str):
     """
@@ -76,6 +92,26 @@ if not text:
     st.info("トップページで内容を入力してからお越しください。")
     st.page_link("app.py", label="← トップに戻る", icon="🏠")
     st.stop()
+
+with st.expander("AIで詳細解析（β）", expanded=False):
+    # 接続状況のミニ表示（デバッグに便利）
+    st.caption("接続状態: " + ("✅ APIキーOK" if _openai_client else "⚠️ APIキー未設定"))
+    if st.button("AIで解析する"):
+        with st.spinner("AIが解析中…"):
+            ai = analyze_with_ai(st.session_state.get("user_input", ""))
+        if ai is None:
+            st.warning("APIキーが未設定のため、AI解析は実行できません。右下『Manage app → Secrets』で OPENAI_API_KEY を設定してください。")
+        else:
+            st.subheader("AIサマリー")
+            st.write(ai.get("summary", ""))
+
+            st.subheader("AIが見つけた可能性のあるバイアス")
+            for b in ai.get("biases", []):
+                st.write(f"- **{b.get('name','?')}**（{b.get('score',0):.2f}）: {b.get('reason','')}")
+            st.subheader("バイアス低減のヒント")
+            for tip in ai.get("tips", []):
+                st.write("🧠 ", tip)
+
 
 stepper(steps=["導入", "入力", "解析"], active=3)
 
