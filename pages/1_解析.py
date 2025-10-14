@@ -261,23 +261,6 @@ with colB:
             st.session_state["ai_quick"] = None
             st.switch_page("pages/1_解析.py")
 
-# ===== 受け取った本文 =====
-text = st.session_state.get("user_input", "").strip()
-if not text:
-    st.info("トップページで内容を入力してください。")
-    st.page_link("app.py", label="← トップに戻る", icon="🏠")
-    st.stop()
-
-st.set_page_config(page_title="解析 - Bias Audit Lab", page_icon="🧪", layout="wide")
-
-st.page_link("app.py", label="← トップへ戻る", icon="🏠")
-
-# 入力チェック
-text = st.session_state.get("user_input", "").strip()
-if not text:
-    st.info("トップページで内容を入力してからお越しください。")
-    st.page_link("app.py", label="← トップに戻る", icon="🏠")
-    st.stop()
 
 stepper(steps=["導入", "入力", "解析"], active=3)
 
