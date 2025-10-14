@@ -131,53 +131,116 @@ h2, h3 {font-size:1.05rem;margin:.9rem 0 .35rem;}
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>🧠 バイアス解析アプリ</h1>", unsafe_allow_html=True)
-st.markdown('<div class="small">Self-Bias Monitor（スマホ対応／高校生でも使いやすい）</div>', unsafe_allow_html=True)
+st.markdown('<div class="small">Self-Bias Monitor</div>', unsafe_allow_html=True)
 
 # ---------- 1) 設定 ----------
 with st.expander("設定（任意）", expanded=False):
     st.session_state["sensitivity"] = st.slider("検出の敏感さ（高いほど拾いやすい）", 0, 100, st.session_state.get("sensitivity", 50))
 
-# ---------- 2) 簡単入力（選択式） ----------
+# ---------- 2) 簡単入力（選択式　20代会社員向け） ----------
+
+if "main_text" not in st.session_state:
+    st.session_state["main_text"] = ""
+
 st.markdown("### 1. かんたん入力（選択式）")
 
-THEMES = ["家計・お金", "仕事・キャリア", "学び・自己成長", "人間関係", "ライフスタイル"]
-SITUATIONS = ["買うか迷う", "やめるか続ける", "選ぶ・比べる", "頼む/断る", "参加するか迷う"]
+# テーマ（20代会社員がよく直面する領域）
+THEMES = [
+    "お金・家計", "仕事・キャリア", "スキル・学習", "人間関係（職場）",
+    "健康・生活リズム", "住まい・暮らし"
+]
+
+# 状況（意思決定の型）
+SITUATIONS = [
+    "買うか迷う", "転職/異動を検討", "学習計画を立てる", "上司/同僚へ依頼・交渉",
+    "貯金/投資の方針", "引っ越し/更新の判断"
+]
+
+# 状況→具体例
 EXAMPLES = {
-    "買うか迷う": ["PCを買う", "スマホ買い替え", "大型家電を買う", "旅行を予約する"],
-    "やめるか続ける": ["部活を続けるか", "塾をやめるか", "SNSを休むか"],
-    "選ぶ・比べる": ["A社とB社どっち", "文系/理系どっち", "ノートPCの機種選び"],
-    "頼む/断る": ["友だちの依頼を断る？", "親に相談する？", "先生に延長を頼む？"],
-    "参加するか迷う": ["サークルに入る？", "ボランティアに行く？", "アルバイトを始める？"],
+    "買うか迷う": [
+        "ノートPCを買い替える", "モニター/周辺機器を買う", "サブスクを継続する",
+        "通勤用の靴/バッグを買う"
+    ],
+    "転職/異動を検討": [
+        "今の会社に残る/転職する", "部署異動に応募する", "副業を始めるか考える"
+    ],
+    "学習計画を立てる": [
+        "英語学習を続ける", "資格（簿記/TOEIC/基本情報）を受ける",
+        "プログラミング学習を始める"
+    ],
+    "上司/同僚へ依頼・交渉": [
+        "納期の相談をする", "残業の分担をお願いする", "有給申請を出す"
+    ],
+    "貯金/投資の方針": [
+        "NISAを始める", "積立額を増やすか", "保険の見直しをする"
+    ],
+    "引っ越し/更新の判断": [
+        "更新する/引っ越す", "家賃の高い部屋に移る", "職場近くへ移る"
+    ],
 }
 
-colA, colB = st.columns(2)
-with colA:
-    theme = st.radio("テーマを選ぶ", THEMES, horizontal=False, key="q_theme")
-with colB:
-    situation = st.selectbox("状況を選ぶ", SITUATIONS, key="q_sit")
+# 目的（判断の軸）
+GOALS = ["お金を節約", "成長/スキルUP", "健康/メンタル優先", "仕事の効率化", "人間関係を保つ"]
 
-example = st.selectbox("具体例を選ぶ", EXAMPLES.get(situation, []), key="q_example")
+# 気持ち（感情手がかり）
+FEELINGS = ["不安", "焦り", "ワクワク", "めんどう", "自信がない", "期待している"]
 
-choices_default = "今すぐ決める, 少し待つ, 今回は見送る"
-choices = st.text_input("選択肢（カンマ区切りで編集可）", value=choices_default, key="q_choices")
+col1, col2 = st.columns(2)
+with col1:
+    theme = st.radio("テーマを選ぶ", THEMES, key="ei_theme")
+with col2:
+    situation = st.selectbox("状況を選ぶ", SITUATIONS, key="ei_situation")
 
-# 自動プレビュー（編集可）
-def make_preview(theme, situation, example, choices):
-    c = [s.strip() for s in (choices or "").split(",") if s.strip()]
-    c_txt = "、".join(c[:3])
+example = st.selectbox("具体例を選ぶ", EXAMPLES.get(situation, []), key="ei_example")
+
+col3, col4 = st.columns(2)
+with col3:
+    goal = st.selectbox("今回の目的（優先したいこと）", GOALS, key="ei_goal")
+with col4:
+    feeling = st.selectbox("いまの気持ちに近いもの", FEELINGS, key="ei_feeling")
+
+# 選択肢（カンマ区切り編集可）: 状況に応じた初期値
+DEFAULT_CHOICES = {
+    "買うか迷う": "今すぐ買う, 少し待つ, 今回は見送る",
+    "転職/異動を検討": "現職に残る, 異動に挑戦, 転職活動を始める",
+    "学習計画を立てる": "週3で続ける, 週1に減らす, いったん中断",
+    "上司/同僚へ依頼・交渉": "すぐ相談する, メールで伝える, 次回に回す",
+    "貯金/投資の方針": "積立額を増やす, 現状維持, いったん停止",
+    "引っ越し/更新の判断": "更新して継続, 引っ越し先を探す, 実家/シェアを検討",
+}
+choices_text = st.text_input(
+    "選択肢（カンマ区切りで編集可）",
+    value=DEFAULT_CHOICES.get(situation, "A案, B案, C案"),
+    key="ei_choices",
+)
+
+# --- 自動プレビュー（編集可） ---
+def build_preview(theme, situation, example, goal, feeling, choices_text):
+    choices = [c.strip() for c in (choices_text or "").split(",") if c.strip()]
+    c_txt = "、".join(choices[:3])  # 3つまで表示
     return (
         f"{example} を検討しています（テーマ：{theme} / 状況：{situation}）。"
-        "良い条件に感じる一方で、後で後悔しないか不安もあります。"
-        "代替案や判断材料を揃えてから決めたいです。"
-        f" 今回の選択肢は「{c_txt}」です。"
+        f" いまの気持ちは『{feeling}』です。"
+        f" 今回の目的は『{goal}』で、候補は「{c_txt}」。"
+        " 後で後悔しないよう、代替案や根拠をそろえて判断したいです。"
     )
 
-preview = make_preview(theme, situation, example, choices)
-st.text_area("自動生成プレビュー（編集可）", preview, key="preview_box", height=140)
+preview_text = build_preview(theme, situation, example, goal, feeling, choices_text)
 
-if st.button("この内容を下の入力欄へ反映", use_container_width=True):
-    st.session_state["main_text"] = st.session_state["preview_box"]
-    st.success("下の入力欄に反映しました👇")
+st.text_area(
+    "自動生成プレビュー（編集可）",
+    value=preview_text,
+    key="ei_preview",
+    height=140,
+)
+
+# 反映ボタン：下の自由入力欄（main_text）へ流し込む
+if st.button("この内容を下の入力欄へ反映", key="ei_apply", use_container_width=True):
+    # ユーザーが編集していればその内容を優先
+    st.session_state["main_text"] = st.session_state.get("ei_preview", preview_text)
+    st.success("反映しました👇『今日の意思決定（入力）』欄に記入されています。")
+# ====================================================================
 
 st.divider()
 
