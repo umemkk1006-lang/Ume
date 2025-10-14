@@ -263,6 +263,20 @@ with colB:
 
 stepper(steps=["導入", "入力", "解析"], active=3)
 
+# 受け取った本文（トップページの入力）
+text = st.session_state.get("user_input", "").strip()
+
+# 未入力で来た場合は案内して終了
+if not text:
+    st.info("トップページで内容を入力してからお越しください。")
+    st.page_link("app.py", label="← トップへ戻る", icon="🏠")
+    st.stop()
+
+
+st.markdown("### 入力内容")
+st.write(text)
+
+
 if st.session_state.get("context_tag"):
     st.caption(f"カテゴリ: {st.session_state['context_tag']}")
 
