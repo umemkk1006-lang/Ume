@@ -120,13 +120,45 @@ def analyze_text(text: str, rules: dict, sensitivity: int):
 st.set_page_config(page_title="バイアス解析アプリ", layout="centered", initial_sidebar_state="collapsed")
 st.markdown("""
 <style>
-h1 {text-align:center;font-size:1.5rem;margin-bottom:.2rem;}
-h2, h3 {font-size:1.05rem;margin:.9rem 0 .35rem;}
-.small {color:#666;font-size:.9rem;text-align:center;margin-bottom:.5rem;}
-.result-card {border:1px solid #eaeaea;border-radius:10px;padding:.8rem;margin-bottom:.6rem;background:#fdfdff;}
-.badge {display:inline-block;padding:.1rem .4rem;border-radius:999px;background:#eef;margin-left:.3rem;font-size:.8rem;}
-.explain {font-size:.9rem;color:#444;margin-bottom:.4rem;}
-.tip {font-size:.95rem}
+/* ---- 全体デザイン調整 ---- */
+h1 {
+    text-align:center;
+    font-size:1.3rem;       /* ← 小さめタイトル */
+    margin-bottom:0.3rem;
+}
+h2, h3 {
+    font-size:1.05rem;
+    margin:.9rem 0 .35rem;
+}
+.small {
+    color:#666;
+    font-size:.9rem;
+    text-align:center;
+    margin-bottom:.5rem;
+}
+.result-card {
+    border:1px solid #eaeaea;
+    border-radius:10px;
+    padding:.8rem;
+    margin-bottom:.6rem;
+    background:#fdfdff;
+}
+.badge {
+    display:inline-block;
+    padding:.1rem .4rem;
+    border-radius:999px;
+    background:#eef;
+    margin-left:.3rem;
+    font-size:.8rem;
+}
+.explain {
+    font-size:.9rem;
+    color:#444;
+    margin-bottom:.4rem;
+}
+.tip {
+    font-size:.95rem
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -237,9 +269,11 @@ st.text_area(
 
 # 反映ボタン：下の自由入力欄（main_text）へ流し込む
 if st.button("この内容を下の入力欄へ反映", key="ei_apply", use_container_width=True):
-    # ユーザーが編集していればその内容を優先
+    st.session_state.setdefault("main_text", "")
+    # ユーザーがプレビューを編集していればそれを優先
     st.session_state["main_text"] = st.session_state.get("ei_preview", preview_text)
     st.success("反映しました👇『今日の意思決定（入力）』欄に記入されています。")
+    st.rerun()  # ← 重要：再描画して下の欄に即時反映
 # ====================================================================
 
 st.divider()
