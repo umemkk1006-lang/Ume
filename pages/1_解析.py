@@ -1,307 +1,104 @@
+# -*- coding: utf-8 -*-
+# pages/1_解析.py
+
+import os, json
 import streamlit as st
 
-selected = st.session_state.get("selected", [])  
-import os, json
-import pandas as pd
+# ========= 解析ロジック（UIより上に置く！） =========
 
-from ui_components import stepper, result_badge, tip_card
-# from core.analysis import analyze_text, explain_biases, suggest_debias_nudges
-
-st.set_page_config(page_title="バイアス監査アプリ", layout="centered", initial_sidebar_state="collapsed")
-
-st.markdown("""
-<style>
-h1 {font-size:1.6rem !important; text-align:center; margin-bottom:0.2em;}
-.subtitle {text-align:center; font-size:0.9rem; color:#6c757d;}
-.process {text-align:center; font-size:0.85rem; background:#f8f9fa; border-radius:8px; padding:0.4em; margin:0 0 1.2em 0;}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("# 🧠 バイアス監査アプリ")
-st.markdown('<div class="subtitle">Self-Bias Monitor (MVP)</div>', unsafe_allow_html=True)
-st.markdown('<div class="process">① 入力 → ② 解析 → ③ 介入 → ④ 支援 → ⑤ 保存</div>', unsafe_allow_html=True)
-
-# ========= ルール読み込み =========
-@st.cache_data
-def load_rules():
-    with open("rules.json", "r", encoding="utf-8") as f:
-        return json.load(f)
-
-# ========= “弱い表現”も拾うための補助辞書 =========
+# ソフトなシグナル（弱い示唆語）
 SOFT_CUES = {
-    "loss_aversion": ["損をする気", "後悔しそう", "逃すと", "安くなっているのに", "失うのが怖", "もったいない気"],
-    "status_quo": ["今のままでいい", "変える必要", "面倒だから", "慣れているから", "とりあえずこのまま"],
-    "anchoring": ["定価が", "参考価格", "最初に見た", "言い値"],
-    "present_bias": ["今すぐ欲しい", "先延ばし", "後で考える"],
-    "sunk_cost": ["ここまでやった", "元を取りたい", "やめるのは惜しい"],
-    "overconfidence": ["絶対いける", "間違いない", "必ず成功", "自分なら大丈夫"],
+    "confirmation": ["確信", "間違いない", "絶対", "都合の良い", "見たいものだけ"],
+    "sunk_cost": ["せっかく", "ここまでやった", "元を取る", "もったいない"],
+    "loss_aversion": ["損したくない", "無駄", "不安", "なくす", "後悔"],
+    "availability": ["よく聞く", "みんな言ってる", "SNSで見た", "バズってる"],
+    "framing": ["お得", "割引", "限定", "今だけ", "先着"],
 }
-EMOTION_WORDS = ["不安", "心配", "焦る", "怖い", "落ち着かない", "迷う", "混乱", "ドキドキ", "モヤモヤ", "悩む"]
-SOFT_CUES["loss_aversion"] += ["逃したくない", "値上げ前に", "限定"]
-SOFT_CUES["status_quo"]   += ["現状のまま", "いつも通り"]
-SOFT_CUES["anchoring"]    += ["割引前価格", "通常価格"]
-SOFT_CUES["sunk_cost"]    += ["もったいない", "ここまで続けた"]
 
-# ========= ヘッダー =========
+# 感情ヒューリスティック用の簡易語彙
+EMOTION_WORDS = ["不安", "焦り", "ワクワク", "怖い", "嬉しい", "悔しい", "怒り", "緊張"]
 
-with st.expander("設定（任意）", expanded=False):
-    st.caption("検出の敏感さ（高いほど拾いやすい）")
-    sensitivity = st.slider("検出の敏感さ", 0, 100, 75)
-rules = load_rules()
-
-# ========= 1. かんたん入力（3段階プリセット） =========
-st.header("1. かんたん入力（選択式）")
-
-theme = st.radio("テーマを選ぶ", ["家計・お金", "仕事・キャリア", "学び・自己成長", "ライフスタイル", "人間関係"], horizontal=True)
-
-if theme == "家計・お金":
-    situation = st.selectbox("状況を選ぶ", ["買うか迷う", "続けるかやめる", "固定費/値上げへの対応", "投資の方針"])
-    scenarios_map = {
-        "買うか迷う": [
-            "PCを買う", "スマホ買い替え", "大型家電を買う", "家具を買い替える",
-            "趣味アイテムを買う", "旅行を予約する"
-        ],
-        "続けるかやめる": [
-            "動画サブスクの継続", "クラウドソフトの有料プラン", "英語アプリの年払い",
-            "習い事の継続", "ジム会員の更新"
-        ],
-        "固定費/値上げへの対応": [
-            "電気・ガスのプラン見直し", "通信費(スマホ/光)を見直す", "保険の更新/乗り換え",
-            "定期券/通学定期の更新", "賃貸の更新と家賃交渉"
-        ],
-        "投資の方針": [
-            "インデックス積立を増やす", "個別株を新規に買う", "積立を一旦止める",
-            "外貨/金に分散する", "NISA枠の配分を変える"
-        ],
+# rules.json を読めなければデフォルトルールを使う
+def load_rules() -> dict:
+    default_rules = {
+        "confirmation": {
+            "label": "確証バイアス",
+            "keywords": ["自分の考えに合う", "都合が良い", "反対の情報を無視"],
+            "interventions": [
+                "反対の証拠を最低1つ探す",
+                "立場が逆の人になりきって主張を書いてみる",
+            ],
+        },
+        "sunk_cost": {
+            "label": "サンクコストの誤謬",
+            "keywords": ["ここまで投資", "もったいない", "元を取る", "諦めない"],
+            "interventions": [
+                "今から始めるとしても同じ判断をするか？を自問",
+                "未来の利益/損失だけで比較する",
+            ],
+        },
+        "loss_aversion": {
+            "label": "損失回避バイアス",
+            "keywords": ["損したくない", "失う", "無駄になる"],
+            "interventions": [
+                "損失だけでなく得られる価値も横並びで書き出す",
+                "金額ではなく目的（何のため？）で評価する",
+            ],
+        },
+        "availability": {
+            "label": "利用可能性ヒューリスティック",
+            "keywords": ["よく聞く", "SNSで見た", "話題", "バズり"],
+            "interventions": [
+                "一次情報（元データ/一次ソース）を1つ確認する",
+                "最近見た事例と統計的な頻度を区別する",
+            ],
+        },
+        "framing": {
+            "label": "フレーミング効果",
+            "keywords": ["お得", "割引", "今だけ", "限定", "先着", "在庫わずか"],
+            "interventions": [
+                "同じ内容を別表現（損失表示/確率表示）に言い換えて検討",
+                "長期的な総コスト/リスクで比較する",
+            ],
+        },
     }
-    default_options_map = {
-        "買うか迷う": "今すぐ買う, 少し待つ, 今回は見送る",
-        "続けるかやめる": "継続する, プランを下げる, 一旦解約する",
-        "固定費/値上げへの対応": "現状維持, 代替プランを比較して乗り換え, 使い方を減らす",
-        "投資の方針": "実行する, 少額から試す, 見送る"
-    }
-    default_options = default_options_map[situation]
-elif theme == "仕事・キャリア":
-    situation = st.selectbox("状況を選ぶ", ["転職を考える", "社内異動/担当変更", "学習/資格の投資", "業務の導入/外注"])
-    scenarios_map = {
-        "転職を考える": [
-            "転職活動を始める", "エージェントに登録する", "副業を並行する",
-            "研究職から実務職へ移る", "大学院進学に切り替える"
-        ],
-        "社内異動/担当変更": [
-            "希望部署に異動申請", "担当業務の比重を変える", "研究テーマを変更する",
-            "TA/RAの配分を変える"
-        ],
-        "学習/資格の投資": [
-            "資格講座に申込む", "学び直しを始める", "英語学習を強化",
-            "統計/プログラミングを学ぶ", "国際会議の準備をする"
-        ],
-        "業務の導入/外注": [
-            "新ツールを導入", "プロセスを簡素化", "外注を使う",
-            "自動化スクリプトを作る", "チーム標準を策定する"
-        ],
-    }
-    default_options = "始める, 情報を集めてから, 見送る"
-elif theme == "学び・自己成長":
-    situation = st.selectbox("状況を選ぶ", ["学びを始める/再開", "留学/奨学金を検討", "習慣化したい", "研究テーマ/卒論"])
-    scenarios_map = {
-        "学びを始める/再開": [
-            "オンライン講座に申込む", "週3で学習する", "ゼミ/読書会に参加",
-            "MOOCを完走する", "学習記録を毎日つける"
-        ],
-        "留学/奨学金を検討": [
-            "短期留学に行く", "交換留学に応募", "Erasmus Mundusに出願",
-            "語学集中プログラムに参加"
-        ],
-        "習慣化したい": [
-            "毎日30分の読書", "朝活を始める", "運動を週3回",
-            "SNS時間を制限する", "論文要約を日次で残す"
-        ],
-        "研究テーマ/卒論": [
-            "テーマをピボットする", "先行研究を30本読む", "データ収集計画を立てる",
-            "指導教員に方針相談する"
-        ],
-    }
-    default_options = "始める, 小さく試す, 見送る"
-elif theme == "ライフスタイル":
-    situation = st.selectbox("状況を選ぶ", ["住まい/引っ越し", "健康/運動/睡眠", "時間管理/デジタル", "家事/育児の分担"])
-    scenarios_map = {
-        "住まい/引っ越し": [
-            "引っ越しを検討", "家賃交渉をする", "家具家電を整理する",
-            "同棲/実家に戻る"
-        ],
-        "健康/運動/睡眠": [
-            "運動を始める", "夜更かしをやめる", "間食を減らす",
-            "睡眠時間を一定にする"
-        ],
-        "時間管理/デジタル": [
-            "SNS時間を減らす", "ポモドーロを導入", "Notion/手帳を一本化",
-            "週末はデジタル断食にする"
-        ],
-        "家事/育児の分担": [
-            "家事分担の話し合い", "外部サービスの活用", "週次のタスク表を作る"
-        ],
-    }
-    default_options = "始める, 小さく試す, 見送る"
-else:  # 人間関係
-    situation = st.selectbox("状況を選ぶ", ["SNS/発信の距離感", "家族/友人との関係", "研究室/職場のコミュニケーション"])
-    scenarios_map = {
-        "SNS/発信の距離感": [
-            "SNSの使い方を見直す", "ポスト頻度を下げる", "DMの通知を切る",
-            "リプライ方針を決める"
-        ],
-        "家族/友人との関係": [
-            "距離をとる", "話し合いの場を作る", "定期連絡の頻度を決める",
-            "贈り物/お礼の頻度を見直す"
-        ],
-        "研究室/職場のコミュニケーション": [
-            "ミーティング頻度を調整", "依頼の断り方を決める", "相談相手を増やす",
-            "フィードバックのルールを作る"
-        ],
-    }
-    default_options = "そのまま続ける, 小さく試す, 見送る"
 
-# セグメントコントロール（古い環境対策：無ければradio）
-seg = getattr(st, "segmented_control", None)
-scenarios = scenarios_map[situation]
-scenario = seg("具体例を選ぶ", scenarios) if seg else st.radio("具体例を選ぶ", scenarios, horizontal=True)
+    try:
+        with open(os.path.join(os.getcwd(), "rules.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default_rules
 
-def build_preview(theme, situation, scenario):
-    base = ""
-    if theme == "家計・お金":
-        if situation == "買うか迷う":
-            base = f"{scenario}を検討しています。良い条件に感じる一方で、無駄遣いになる不安もあり迷っています。"
-        elif situation == "続けるかやめる":
-            base = f"{scenario}べきか迷っています。ここまで続けた流れと費用対効果のどちらを重視するかで揺れています。"
-        elif situation == "固定費/値上げへの対応":
-            base = f"{scenario}ことを検討しています。値上げの影響と、代替プランの比較で判断したいです。"
-        elif situation == "投資の方針":
-            base = f"{scenario}か迷っています。期待リターンと変動リスクのバランスを整理したいです。"
-    elif theme == "仕事・キャリア":
-        if situation == "業務の導入/外注":
-            base = f"{scenario}ことを考えています。導入コストと習熟の負担、得られる効率化のバランスで迷っています。"
-        else:
-            base = f"{scenario}かどうか迷っています。将来の選択肢を広げるか、現状維持の安心を取るかで揺れています。"
-    elif theme == "学び・自己成長":
-        if situation == "留学/奨学金を検討":
-            base = f"{scenario}を考えています。費用と得られる機会のどちらを優先するかで迷っています。"
-        else:
-            base = f"{scenario}を始めるか迷っています。継続できる計画と優先順位を考えたいです。"
-    elif theme == "ライフスタイル":
-        if situation == "住まい/引っ越し":
-            base = f"{scenario}か迷っています。費用・通学/通勤・生活の満足度のバランスで判断したいです。"
-        else:
-            base = f"{scenario}を検討しています。健康や時間の使い方への影響を踏まえて考えたいです。"
-    else:  # 人間関係
-        base = f"{scenario}について迷っています。自分と相手の負担や関係性への影響を整理したいです。"
+RULES = load_rules()
 
-    return base + "\n判断材料や代替案も考慮したいです。"
-
-
-# === プレビュー用の下ごしらえ（seedでリセット）===
-seed = (theme, situation, scenario)
-if st.session_state.get("preview_seed") != seed:
-    st.session_state["preview_text_value"] = build_preview(theme, situation, scenario)
-    st.session_state["preview_opts_value"] = default_options
-    st.session_state["preview_seed"] = seed
-
-
-# ── ここから置き換え ───────────────────────────────
-# プレビュー表示用のカラム（左：本文プレビュー／右：選択肢＋反映ボタン）
-colA, colB = st.columns([3, 2])
-
-with colA:
-    preview_text = st.text_area(
-        "自動生成プレビュー（編集可）",
-        height=140,
-        key="preview_text_value",   
-    )
-
-with colB:
-    preview_opts = st.text_input(
-        "選択肢（カンマ区切り）",
-        key="preview_opts_value",   
-    )
-    if st.button("この内容を下の入力欄へ反映", use_container_width=True, key="reflect_btn_preview"):
-        st.session_state["main_decision_text"] = st.session_state.get("preview_text_value", "")
-        st.session_state["main_options"] = st.session_state.get("preview_opts_value", "")
-        st.success("入力欄へ反映しました。")
-# ── 置き換えはここまで ─────────────────────────────
-
-st.header("2. 今日の意思決定（入力）")
-decision_text = st.text_area(
-    "本文（上の反映で自動入力されます）",
-    value=st.session_state.get("main_decision_text", ""),
-    height=180,
-    key="main_decision_text",   # ← こちらは main_〜 なので重複しません
-)
-
-# テキスト入力から「選択肢」をリスト化（multiselect が無い構成のため）
-opts_source = st.session_state.get("preview_opts_value") or st.session_state.get("main_options", "")
-selected = [o.strip() for o in opts_source.split(",") if o.strip()]
-
-st.divider()
-# 画面下に大きめの遷移ボタン
-colA, colB, colC = st.columns([1, 2, 1])
-with colB:
-    if st.button("バイアス解析ページへ ▶️", use_container_width=True):
-        # 入力欄の値を優先的に拾う（無ければ既存の user_input）
-        _text = (st.session_state.get("main_decision_text", "") or
-                 st.session_state.get("user_input", "")).strip()
-        _tag = st.session_state.get("context_tag", "")
-        _selected = st.session_state.get("selected", [])
-
-        if not _text:
-            st.warning("まずは上の入力欄に1行でも入力してください。")
-        else:
-            st.session_state["user_input"] = _text
-            st.session_state["context_tag"] = _tag
-            st.session_state["selected"] = _selected
-            # 簡単AIの結果は混ざらないように毎回クリア
-            st.session_state["ai_quick"] = None
-            st.switch_page("pages/1_解析.py")
-
-stepper(steps=["導入", "入力", "解析"], active=3)
-
-# 受け取った本文（トップページの入力）
-text = st.session_state.get("user_input", "").strip()
-
-# 未入力で来た場合は案内して終了
-if not text:
-    st.info("トップページで内容を入力してからお越しください。")
-    st.page_link("app.py", label="← トップへ戻る", icon="🏠")
-    st.stop()
-
-
-st.markdown("### 入力内容")
-st.write(text)
-
-
-if st.session_state.get("context_tag"):
-    st.caption(f"カテゴリ: {st.session_state['context_tag']}")
-
-st.divider()
-
-# ========= 解析本体 =========
 def analyze_text(text: str, rules: dict, sensitivity: int):
+    """
+    簡易ルールベース解析。
+    sensitivity: 0〜100（高いほど検知しやすい）。しきい値は線形で可変。
+    戻り値: (findings(list[dict]), debug_scores(dict))
+    """
     text = (text or "").strip()
     if not text:
         return [], {}
 
-    # しきい値：1.20（厳）〜0.40（敏感）に線形可変
+    # しきい値: 1.20(厳)〜0.40(敏感) の間で線形
     threshold = 1.20 - (sensitivity / 100) * 0.80
-
     findings, debug_scores = [], {}
 
-    # 強シグナル（rules.json）+ 弱シグナル（SOFT_CUES）の合算スコア
     for key, spec in rules.items():
         score, evidences = 0.0, []
+
+        # 強めシグナル（キーワード）
         for kw in spec.get("keywords", []):
             if kw and kw in text:
-                score += 1.0; evidences.append(kw)
+                score += 1.0
+                evidences.append(kw)
+
+        # 弱めシグナル（SOFT_CUES）
         for soft_kw in SOFT_CUES.get(key, []):
             if soft_kw and soft_kw in text:
-                score += 0.5; evidences.append(soft_kw)
+                score += 0.5
+                evidences.append(soft_kw)
 
         if score >= threshold:
             conf = "A" if score >= (threshold + 0.8) else "B"
@@ -311,13 +108,13 @@ def analyze_text(text: str, rules: dict, sensitivity: int):
                 "confidence": conf,
                 "evidence": evidences,
                 "suggestions": spec.get("interventions", []),
-                "score": round(score, 2)
+                "score": round(score, 2),
             })
-            debug_scores[spec.get("label", key)] = round(score, 2)
+        debug_scores[spec.get("label", key)] = round(score, 2)
 
-    # 感情ヒューリスティック（弱い表現も拾う）
+    # 感情ヒューリスティック（おまけ）
     emo_hits = [w for w in EMOTION_WORDS if w in text]
-    emo_score = 0.5 * len(emo_hits)  # 1語=0.5点
+    emo_score = 0.5 * len(emo_hits)
     if emo_score >= max(0.5, threshold * 0.6):
         findings.append({
             "type": "affect",
@@ -325,302 +122,132 @@ def analyze_text(text: str, rules: dict, sensitivity: int):
             "confidence": "B" if emo_score < (threshold + 0.8) else "A",
             "evidence": emo_hits,
             "suggestions": [
-                "気持ちが落ち着いてから再評価（24時間ルール）",
-                "％や印象を金額・時間に置き換えて比較する",
-                "第三者の短評（外部視点）を3行で書く"
+                "一晩おいてから再評価（24時間ルール）",
+                "第三者の短評（外部視点）を3行でもらう",
             ],
-            "score": round(emo_score, 2)
+            "score": round(emo_score, 2),
         })
-        debug_scores["感情ヒューリスティック"] = round(emo_score, 2)
+    debug_scores["感情ヒューリスティック"] = round(emo_score, 2)
 
     findings.sort(key=lambda x: x.get("score", 0.0), reverse=True)
     return findings, {"threshold": round(threshold, 2), "scores": debug_scores}
 
-def save_decision(row, path="decisions.csv"):
-    df_new = pd.DataFrame([row])
-    if os.path.exists(path):
-        df_old = pd.read_csv(path)
-        df = pd.concat([df_old, df_new], ignore_index=True)
-    else:
-        df = df_new
-    df.to_csv(path, index=False, encoding="utf-8-sig")
+# ========= UI =========
 
+st.set_page_config(page_title="バイアス解析アプリ", layout="centered", initial_sidebar_state="collapsed")
 
-if "プレモーテム" in selected:
-    premortem = st.text_area("プレモーテム：最悪結果の主因Top3と予防策（各1行）", height=120, key="premortem")
+# ちょっとだけ読みやすいCSS（モバイル最適）
+st.markdown("""
+<style>
+h1 { text-align:center; margin-bottom:0.2rem; }
+.small { color:#667; font-size:0.9rem; text-align:center; margin-bottom:0.6rem; }
+section { background:#fff; border:1px solid #eee; border-radius:12px; padding:0.9rem 1rem; margin:0.6rem 0; }
+label, .stRadio, .stSelectbox, .stTextArea { font-size:1rem; }
+.result-card { border:1px solid #e8e8e8; border-radius:10px; padding:0.8rem; margin-bottom:0.6rem; background:#fcfcff; }
+.kicker { font-size:.9rem; color:#667; margin-bottom:.2rem; }
+.badge { display:inline-block; padding:.1rem .5rem; border-radius:999px; background:#eef; margin-left:.4rem; }
+</style>
+""", unsafe_allow_html=True)
 
-if "外部視点" in selected:
-    cA, cB, cC = st.columns(3)
-    with cA: outside_A = st.text_area("Aさんの3行コメント", height=90, key="outside_A")
-    with cB: outside_B = st.text_area("Bさんの3行コメント", height=90, key="outside_B")
-    with cC: outside_C = st.text_area("Cさんの3行コメント", height=90, key="outside_C")
+st.markdown("<h1>🧠 バイアス解析アプリ</h1>", unsafe_allow_html=True)
+st.markdown('<div class="small">Self-Bias Monitor (MVP)</div>', unsafe_allow_html=True)
 
-if "ベースレート確認" in selected:
-    base_rate_source = st.text_input("出典URLや資料名（なければ『なし』）", value="", key="base_rate")
+# --- 設定（任意） ---
+with st.expander("設定（任意）", expanded=False):
+    sensitivity = st.slider("検出の敏感さ（高いほど拾いやすい）", 0, 100, value=int(st.session_state.get("sensitivity", 50)))
+    st.session_state["sensitivity"] = sensitivity
 
-if "フレーミング反転（％→円/損失）" in selected:
-    framing = st.text_input("反転後の表現（例：年◯円の損失に相当 など）", value="", key="framing")
-
-if "決定遅延（24h後に再確認）" in selected:
-    delay_24h = st.toggle("24時間後に再確認（端末側のリマインダ設定を推奨）", value=True, key="delay24h")
-
-options = ["プレモーテム", "外部視点", "ベースレート確認", "フレーミング反転"]
-selected = st.multiselect("解析オプション（任意）", options, default=[])
-# 送信時:
-if submit:
-    st.session_state["user_input"] = topic.strip()
-    st.session_state["context_tag"] = context_tag if context_tag != "未選択" else ""
-    st.session_state["selected"] = selected             # 
-    if not st.session_state["user_input"]:
-        st.warning("まずは内容を1行でも入力してください。")
-    else:
-        # Streamlitの標準マルチページ遷移（pages/1_解析.pyが表示されます）
-        st.switch_page("pages/1_解析.py")
-
-c1, c2 = st.columns(2)
-with c1:
-    importance = st.slider("重要度", 0, 100, 50)
-with c2:
-    confidence_pre = st.slider("自信度（介入前）", 0, 100, 50)
-    
-if st.button("解析する", type="primary"):
-    # ====== ここをあなたの解析処理に置き換え ======
-    # 例）findings = calc_findings(inputs)  # list を返す。未検出なら []
-    findings = []  # 仮：今回は未検出だったケース
-    debug_info = {"threshold": "-", "scores": {}}
-    # ================================================
-    st.session_state.findings = findings or []     # 空でもリストを保存
-    st.session_state.debug = debug_info
-    st.success("解析しました。下の結果をご確認ください。")
-
-# --- session_state の初期化 ---
-if "findings" not in st.session_state:
-    st.session_state.findings = None   # None=未実行, []=未検出, ["..."]=検出あり
-if "debug" not in st.session_state:
-    st.session_state.debug = {}
-
-# 確からしさ(A/B/C)を文字と説明に変換
-def confidence_letter(score: float):
-    if score >= 0.8:
-        return "A", "高い（かなり当てはまりそう）"
-    elif score >= 0.6:
-        return "B", "中くらい（それっぽいが他の可能性も）"
-    else:
-        return "C", "低め（参考程度）"
-
-# 1件分のカード表示
-def render_finding_card(f: dict):
-    label = f.get("label", "（名称未設定）")
-    score = float(f.get("score", 0.0) or 0.0)
-    letter, expl = confidence_letter(score)
-
-    with st.container(border=True):
-        st.markdown(f"**{label}**　|　確からしさ：**{letter}**（{expl}）")
-
-        ev = f.get("evidence") or []
-        if ev:
-            st.caption("根拠：" + "、".join(ev[:3]))
-        with st.expander("対処ヒントを見る"):
-            for s in f.get("suggestions", []):
-                st.markdown("- " + s)
-
-
-# ======== 3. 解析結果 ========
-st.header("3. 解析結果")
-
-findings = st.session_state.get("findings", None)  # ← 既定を None に
-dbg = st.session_state.get("debug", {})
-
-if findings is None:
-    # まだ解析を押していない
-    st.caption("（解析未実行）")
-
-elif len(findings) == 0:
-    # 解析はしたがヒットなし → ここで褒める＆次導線
-    st.success("🎉 今回は偏りは見つかりませんでした。落ち着いた判断ができていますね。")
-    st.info("次は「4. 介入の選択と記入」または「4️⃣ 支援介入」で、現実的な行動プランを作りましょう。")
-
-else:
-   for f in findings:
-    render_finding_card(f)
-
-# 4. =========介入の選択と記入=========
-
-st.header("4. 介入の選択と記入")
-
-# 既定値（無い場合は空）をセッションから取り出す（必要なら）
-_selected_default = st.session_state.get("selected", [])
-
-options = {
-    "外部視点": "第三者や未来の自分の視点で見直す",
-    "ベースレート確認": "統計や過去の確率に照らして再考する",
-    "フレーミング反転": "損得の表現を入れ替えて評価する",
-    "決定遅延": "24時間置いてから再評価する",
-    "プレモーテム": "失敗を仮定して原因と予防策を先に考える",
+# --- 1. かんたん入力（選択式） ---
+st.markdown("### 1. かんたん入力（選択式）")
+themes = {
+    "家計・お金": {
+        "状況": ["買うか迷う", "契約の更新", "やめるか迷う"],
+        "例": ["PCを買う", "スマホ買い替え", "大型家電を買う", "家具を買い替える", "旅行を予約する"],
+    },
+    "仕事・キャリア": {
+        "状況": ["応募するか迷う", "転職を検討", "資格に挑戦"],
+        "例": ["転職サイトに登録", "社内公募に応募", "資格の受験申し込み"],
+    },
+    "学び・自己成長": {
+        "状況": ["コース受講を検討", "書籍購入を検討"],
+        "例": ["オンライン講座を受ける", "専門書を買う", "勉強会に参加"],
+    },
+    "人間関係": {
+        "状況": ["誘いに乗るか迷う", "連絡すべきか迷う"],
+        "例": ["飲み会に参加", "久しぶりに連絡する", "SNSに投稿する"],
+    },
+    "ライフスタイル": {
+        "状況": ["習慣を始める/やめる", "サブスクの見直し"],
+        "例": ["ジムに入会", "早起きを始める", "動画サブスクを解約"],
+    },
 }
 
-selected = st.multiselect(
-    "実施する介入（最大2つ）",
-    list(options.keys()),
-    max_selections=2,
-    default=_selected_default,
-    key="selected",
-    help="介入＝バイアスを中和する“思考アクション”です。"
-)
+colA, colB = st.columns(2)
+with colA:
+    theme = st.radio("テーマを選ぶ", list(themes.keys()), horizontal=False, index=0, key="theme")
+with colB:
+    status = st.selectbox("状況を選ぶ", themes[st.session_state["theme"]]["状況"], key="status")
 
-for k in selected:
-    st.caption(f"ℹ️ {k}: {options[k]}")
+example = st.selectbox("具体例を選ぶ", themes[st.session_state["theme"]]["例"], key="example")
 
-# プレモーテム選択時の入力欄
-if "プレモーテム" in selected:
-    st.write("🔍 プレモーテム：最悪結果の主因Top3と予防策（各1行）")
-    for i in range(1, 4):
-        st.text_input(f"主因{i}", placeholder="例：準備不足")
-        st.text_input(f"予防策{i}", placeholder="例：前日にチェックリスト作成")
+# プレビュー自動生成
+preview = f"{example} を検討しています。良い条件に感じる一方で、不安や無駄遣いになる不安もあり迷っています。判断材料や代替案も考慮したいです。"
+st.text_area("自動生成プレビュー（編集可）", value=preview, key="preview_text", height=110)
 
+# --- 2. 今日の意思決定（入力） ---
+st.markdown("### 2. 今日の意思決定（入力）")
+default_text = st.session_state.get("user_input", st.session_state.get("preview_text", ""))
+decision_text = st.text_area("本文（上のプレビューから自由に編集してください）", value=default_text, key="decision_text", height=160)
 
-# -*- coding: utf-8 -*-
-# ================================
-# 4) 支援介入（現実的な対策）
-# ================================
-st.subheader("4️⃣ 支援介入（現実的な対策）")
-st.caption("不安を具体化すると、現実的な代替案や制度が見つかりやすくなります。")
+# --- 3. バイアス解析 ---
+st.markdown("### 3. バイアス解析")
+run = st.button("バイアス解析", type="primary", use_container_width=True)
 
-theme = st.text_input("いまの不安を一言で（例：教育費が心配、住宅ローン、老後が不安）")
-income = st.text_input("どのくらいの収入があれば安心？（例：月25万円）")
-years = st.number_input("老後まであと何年？", min_value=0, max_value=80, value=20, step=1)
-areas = st.multiselect(
-    "心配分野（複数選択可）",
-    ["教育費", "健康", "住宅ローン", "老後資金", "生活費", "仕事・収入の不安"]
-)
-
-def suggest_lines(theme_text: str, areas_selected: list, income_text: str, years_to_retire: int):
-    t = theme_text or ""
-    tags = set(areas_selected)
-
-    if ("教育" in t) or ("学費" in t) or ("塾" in t):
-        tags.add("教育費")
-    if ("住宅" in t) or ("ローン" in t) or ("家賃" in t):
-        tags.add("住宅ローン")
-    if ("老後" in t) or ("年金" in t) or ("退職" in t):
-        tags.add("老後資金")
-    if ("健康" in t) or ("医療" in t):
-        tags.add("健康")
-    if ("生活費" in t) or ("家計" in t) or ("節約" in t):
-        tags.add("生活費")
-    if ("収入" in t) or ("仕事" in t) or ("転職" in t) or ("副業" in t):
-        tags.add("仕事・収入の不安")
-
-    base = [
-        "支出の見える化：1日10分の家計記録で“見えない支出”を可視化する。",
-        "優先順位づけ：今月の『守る支出（必須）／減らす支出（調整）／やめる支出（不要）』を仕分けする。",
-        "自治体の相談窓口：お住まいの自治体サイトで生活・教育・住宅等の支援制度を一覧確認する。"
-    ]
-
-    bucket = {
-        "教育費": [
-            "就学援助・奨学金：自治体の就学援助、国・自治体の奨学金（無利子含む）を確認。",
-            "学びの代替：無料のオンライン教材・図書館講座・地域学習会を活用して学習効果を維持。",
-            "費用の平準化：年額イベント（受験・教材）を月割りで積立、臨時出費を平準化。"
-        ],
-        "住宅ローン": [
-            "控除や軽減：住宅ローン控除、固定資産税の減免・リフォーム補助の適用可否を確認。",
-            "返済見直し：金利タイプの見直し・借換え・返済期間の延長短縮の試算を家計アプリで実行。",
-            "住居費基準：手取りの25〜30%以内を目標に、基準超過なら契約条件の再交渉や住み替えも検討。"
-        ],
-        "老後資金": [
-            f"制度活用：iDeCo/つみたてNISAなど税優遇制度で長期積立。年金記録のねんきんネット確認。",
-            f"年数逆算：老後までの年数（例: {years_to_retire}年）で、月いくら積み立てればよいかを逆算。",
-            "つながり維持：地域活動・軽運動・学び直しで健康寿命と社会的つながりを確保。"
-        ],
-        "健康": [
-            "定期検診：自治体の無料/低額検診、健康相談の利用スケジュールを作成。",
-            "食・睡眠・運動：お金をかけない生活改善（自炊・就寝前のスマホ断ち・歩数目標）を実施。",
-            "医療費対策：高額療養費制度・自立支援医療などの対象可否を確認。"
-        ],
-        "生活費": [
-            "固定費：通信・保険・サブスクの見直しで月◯%削減を狙う。",
-            "変動費：食費は週単位の予算袋方式でコントロール（特売日×作り置き）。",
-            "公共サービス：図書館・公園・公共スポーツ施設を積極活用して娯楽費を置き換え。"
-        ],
-        "仕事・収入の不安": [
-            "収入の底上げ：社内の手当・資格手当・評価基準を確認。昇給の道筋を上司と合意。",
-            "小さな副業：週2〜3時間で始められるスキル販売/オンライン講座を試行（失敗コストを極小に）。",
-            "転職準備：職務経歴の棚卸し→求人票の要件差分を学習計画に変換（3か月単位）。"
-        ]
-    }
-
-    income_hint = []
-    if income_text:
-        income_hint.append(f"安心ライン（あなたの目安）：{income_text}。この数字を基準に、毎月の必要貯蓄や稼得計画を逆算。")
-
-    lines = []
-    for tag in tags:
-        if tag in bucket:
-            lines.extend(bucket[tag])
-
-    if not lines:
-        lines = base.copy()
+if run:
+    txt = (st.session_state.get("decision_text") or "").strip()
+    if not txt:
+        st.warning("本文が空です。上の入力欄に内容を書いてください。")
     else:
-        lines = base + lines
+        with st.spinner("解析中..."):
+            findings, debug = analyze_text(txt, RULES, st.session_state.get("sensitivity", 50))
+        st.session_state["analysis_result"] = {"findings": findings, "debug": debug, "text": txt}
 
-    if income_hint:
-        lines = income_hint + lines
+# 解析結果の表示（ボタン後、またはセッションに残っていれば表示）
+res = st.session_state.get("analysis_result")
+if res:
+    st.divider()
+    st.subheader("解析結果")
+    if not res["findings"]:
+        st.info("明確なバイアスは検出されませんでした。")
+    else:
+        for f in res["findings"]:
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div class="result-card">
+                      <div class="kicker">検出タイプ</div>
+                      <h4 style="margin:.2rem 0 .4rem 0;">{f.get('label','(不明)')}
+                        <span class="badge">信頼度: {f.get('confidence','-')}</span>
+                        <span class="badge">スコア: {f.get('score','-')}</span>
+                      </h4>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if f.get("evidence"):
+                    st.caption("根拠: " + "、".join(f["evidence"]))
+                tips = f.get("suggestions", [])
+                if tips:
+                    st.markdown("**バイアス低減のヒント**")
+                    for t in tips:
+                        st.write("・" + t)
+                st.markdown("</div>", unsafe_allow_html=True)
 
-    uniq = []
-    for x in lines:
-        if x not in uniq:
-            uniq.append(x)
-    return uniq[:6]
+    with st.expander("デバッグ（スコア詳細）", expanded=False):
+        st.write("しきい値:", res["debug"].get("threshold"))
+        st.write(res["debug"].get("scores", {}))
 
-if st.button("提案を表示"):
-    suggestions = suggest_lines(theme, areas, income, years)
-    st.markdown("💡 **あなたへの提案**")
-    for s in suggestions:
-        st.write("- " + s)
-    st.caption("※具体的な名称・要件はお住まいの自治体サイトで必ずご確認ください。")
-
-
-# ========= 5. 再評価 & 保存 =========
-st.header("5. 再評価と保存")
-confidence_post = st.slider("自信度（介入後）", 0, 100, 50)
-change_reason = st.text_input("自信が変化した理由（100字以内）", value="")
-
-if st.button("この意思決定を保存", use_container_width=True):
-    row = {
-        "decision_id": datetime.now().strftime("%Y%m%d%H%M%S"),
-        "timestamp": datetime.now().isoformat(),
-        "theme": theme, "situation": situation, "scenario": scenario,
-        "text": st.session_state.get("decision_text", ""),
-        "options": st.session_state.get("options_text", ""),
-        "importance": st.session_state.get("importance", 0),
-        "confidence_pre": st.session_state.get("confidence_pre", 0),
-        "biases": ";".join([f"{f['label']}:{f['confidence']}" for f in findings]) if findings else "",
-        "evidence": ";".join([",".join(f["evidence"]) for f in findings]) if findings else "",
-        "interventions": ";".join(selected),
-        "premortem": (premortem or "").replace("\n", " / "),
-        "outside_view_A": (outside_A or "").replace("\n", " / "),
-        "outside_view_B": (outside_B or "").replace("\n", " / "),
-        "outside_view_C": (outside_C or "").replace("\n", " / "),
-        "base_rate_source": base_rate_source,
-        "framing": framing,
-        "delay_24h": delay_24h,
-        "confidence_post": confidence_post,
-        "change_reason": change_reason
-    }
-    save_decision(row)
-    st.success("保存しました。下の『履歴』で確認できます。")
-
-# ========= 6. 履歴 =========
-st.header("6. 履歴")
-if os.path.exists("decisions.csv"):
-    df = pd.read_csv("decisions.csv")
-    st.dataframe(df, use_container_width=True, height=300)
-    st.download_button("CSVをダウンロード",
-                       data=df.to_csv(index=False).encode("utf-8-sig"),
-                       file_name="decisions.csv", mime="text/csv")
-else:
-    st.caption("まだ保存はありません。")
-
-st.divider()
-st.markdown("© Bias Audit MVP — 学習目的。高リスク判断は専門家の助言も併用してください。")
+    st.markdown("")
+    if st.button("結果をクリアしてやり直す"):
+        for k in ["analysis_result"]:
+            st.session_state.pop(k, None)
+        st.experimental_rerun()
