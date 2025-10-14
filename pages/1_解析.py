@@ -261,11 +261,8 @@ with colB:
             st.session_state["ai_quick"] = None
             st.switch_page("pages/1_解析.py")
 
-
 stepper(steps=["導入", "入力", "解析"], active=3)
 
-st.markdown("### 入力内容")
-st.write(text)
 if st.session_state.get("context_tag"):
     st.caption(f"カテゴリ: {st.session_state['context_tag']}")
 
