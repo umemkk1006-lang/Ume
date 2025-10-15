@@ -115,214 +115,240 @@ def analyze_text(text: str, rules: dict, sensitivity: int):
     findings.sort(key=lambda x: x.get("score", 0.0), reverse=True)
     return findings, {"threshold": round(threshold, 2), "scores": debug_scores}
 
-# ========= UI =========
+# --- 必須インポート（ページ冒頭） ---
+import streamlit as st
+from datetime import datetime
 
-st.set_page_config(page_title="バイアス解析アプリ", layout="centered", initial_sidebar_state="collapsed")
+# ------ セッション初期化 ------
+for k, v in {
+    "decision_text": "",        # 入力欄の本文
+    "easy_theme": "お金・家計",
+    "easy_situation": "買うか迷う",
+    "easy_example": "",
+    "easy_preview": "",         # プレビュー文
+}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+# ------ CSS：スマホで見やすいサイズを強制適用 ------
 st.markdown("""
 <style>
-/* ---- 全体デザイン調整 ---- */
-h1 {
-    text-align:center;
-    font-size:1.3rem;       /* ← 小さめタイトル */
-    margin-bottom:0.3rem;
+/* Streamlit は内部で h1,h2 に別の余白/サイズを当てるため、スコープ広めに指定 */
+.stApp div.block-container h1 {
+  font-size: 1.25rem;           /* ← タイトル小さめ */
+  line-height: 1.35;
+  margin: .6rem 0 .4rem 0;
 }
-h2, h3 {
-    font-size:1.05rem;
-    margin:.9rem 0 .35rem;
+.stApp div.block-container h2 {
+  font-size: 1.05rem;
+  margin: .9rem 0 .45rem 0;
 }
-.small {
-    color:#666;
-    font-size:.9rem;
-    text-align:center;
-    margin-bottom:.5rem;
-}
-.result-card {
-    border:1px solid #eaeaea;
-    border-radius:10px;
-    padding:.8rem;
-    margin-bottom:.6rem;
-    background:#fdfdff;
-}
-.badge {
-    display:inline-block;
-    padding:.1rem .4rem;
-    border-radius:999px;
-    background:#eef;
-    margin-left:.3rem;
-    font-size:.8rem;
-}
-.explain {
-    font-size:.9rem;
-    color:#444;
-    margin-bottom:.4rem;
-}
-.tip {
-    font-size:.95rem
+.small-note { font-size:.85rem; color:#666; }
+.preview-card{
+  border:1px solid #e9e9ee; border-radius:10px; padding:.8rem; background:#fafbff;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1>🧠 バイアス解析アプリ</h1>", unsafe_allow_html=True)
-st.markdown('<div class="small">Self-Bias Monitor</div>', unsafe_allow_html=True)
+# ------ 簡単入力：辞書定義 ------
+THEMES = ["お金・家計", "仕事・キャリア", "スキル・学習", "人間関係（職場）", "健康・生活リズム", "住まい・暮らし"]
 
-# ---------- 1) 設定 ----------
-with st.expander("設定（任意）", expanded=False):
-    st.session_state["sensitivity"] = st.slider("検出の敏感さ（高いほど拾いやすい）", 0, 100, st.session_state.get("sensitivity", 50))
+SITUATIONS = {
+    "お金・家計": ["買うか迷う", "固定費を見直す", "貯金/投資を始める"],
+    "仕事・キャリア": ["転職を考える", "資格を取る", "副業を始める"],
+    "スキル・学習": ["新しい勉強を始める", "勉強時間を増やす", "教材を買うか迷う"],
+    "人間関係（職場）": ["頼み事をする", "断る/調整する", "報連相のやり方を変える"],
+    "健康・生活リズム": ["運動を始める", "睡眠を整える", "食生活を改善する"],
+    "住まい・暮らし": ["引っ越しを考える", "家電を買い替える", "サブスクを解約する"],
+}
 
-# ---------- 2) 簡単入力（選択式　20代会社員向け） ----------
-
-if "main_text" not in st.session_state:
-    st.session_state["main_text"] = ""
-
-st.markdown("### 1. かんたん入力（選択式）")
-
-# テーマ（20代会社員がよく直面する領域）
-THEMES = [
-    "お金・家計", "仕事・キャリア", "スキル・学習", "人間関係（職場）",
-    "健康・生活リズム", "住まい・暮らし"
-]
-
-# 状況（意思決定の型）
-SITUATIONS = [
-    "買うか迷う", "転職/異動を検討", "学習計画を立てる", "上司/同僚へ依頼・交渉",
-    "貯金/投資の方針", "引っ越し/更新の判断"
-]
-
-# 状況→具体例
 EXAMPLES = {
-    "買うか迷う": [
-        "ノートPCを買い替える", "モニター/周辺機器を買う", "サブスクを継続する",
-        "通勤用の靴/バッグを買う"
-    ],
-    "転職/異動を検討": [
-        "今の会社に残る/転職する", "部署異動に応募する", "副業を始めるか考える"
-    ],
-    "学習計画を立てる": [
-        "英語学習を続ける", "資格（簿記/TOEIC/基本情報）を受ける",
-        "プログラミング学習を始める"
-    ],
-    "上司/同僚へ依頼・交渉": [
-        "納期の相談をする", "残業の分担をお願いする", "有給申請を出す"
-    ],
-    "貯金/投資の方針": [
-        "NISAを始める", "積立額を増やすか", "保険の見直しをする"
-    ],
-    "引っ越し/更新の判断": [
-        "更新する/引っ越す", "家賃の高い部屋に移る", "職場近くへ移る"
-    ],
+    ("お金・家計", "買うか迷う"): ["PCを買う", "スマホ買い替え", "大型家電を買う", "趣味アイテムを買う"],
+    ("お金・家計", "固定費を見直す"): ["携帯プラン変更", "保険の見直し", "動画サブスク解約"],
+    ("お金・家計", "貯金/投資を始める"): ["つみたてNISA", "定期預金", "iDeCo加入"],
+
+    ("仕事・キャリア", "転職を考える"): ["応募するか迷う", "今の部署で続ける", "上司に相談する"],
+    ("仕事・キャリア", "資格を取る"): ["簿記2級", "TOEIC対策", "ITパスポート"],
+    ("仕事・キャリア", "副業を始める"): ["ブログ/発信", "動画編集を学ぶ", "プログラミング学習"],
+
+    ("スキル・学習", "新しい勉強を始める"): ["Python入門", "Webデザイン", "統計学"],
+    ("スキル・学習", "勉強時間を増やす"): ["朝活を始める", "通勤時間を活用", "学習アプリ導入"],
+    ("スキル・学習", "教材を買うか迷う"): ["オンライン講座", "問題集", "有料ノート"],
+
+    ("人間関係（職場）", "頼み事をする"): ["同僚にヘルプ依頼", "上司へ調整依頼", "他部署に相談"],
+    ("人間関係（職場）", "断る/調整する"): ["期限延長をお願い", "会議時間の調整", "作業の優先度変更"],
+    ("人間関係（職場）", "報連相のやり方を変える"): ["日報の改善", "短い定例ミーティング", "チャット運用ルール"],
+
+    ("健康・生活リズム", "運動を始める"): ["ジムに通う", "自宅トレ", "朝の散歩"],
+    ("健康・生活リズム", "睡眠を整える"): ["就寝時間を固定", "寝る前スマホOFF", "寝具の見直し"],
+    ("健康・生活リズム", "食生活を改善する"): ["自炊を増やす", "間食を減らす", "飲み物を水にする"],
+
+    ("住まい・暮らし", "引っ越しを考える"): ["職場に近い物件", "家賃を下げる", "シェアハウス"],
+    ("住まい・暮らし", "家電を買い替える"): ["冷蔵庫", "洗濯機", "掃除機"],
+    ("住まい・暮らし", "サブスクを解約する"): ["動画", "音楽", "ゲーム"],
 }
 
-# 目的（判断の軸）
-GOALS = ["お金を節約", "成長/スキルUP", "健康/メンタル優先", "仕事の効率化", "人間関係を保つ"]
+def build_preview(theme:str, situation:str, example:str)->str:
+    """選択肢から分かりやすい1〜3文のプレビューを生成"""
+    if not (theme and situation):
+        return ""
+    base = {
+        "お金・家計": "お金の使い方で迷っています。",
+        "仕事・キャリア": "今後の働き方について考えています。",
+        "スキル・学習": "学習の方向性を整理したいです。",
+        "人間関係（職場）": "職場でのコミュニケーションについて悩んでいます。",
+        "健康・生活リズム": "生活リズムや健康面を整えたいです。",
+        "住まい・暮らし": "暮らし方を少し見直したいと思っています。",
+    }.get(theme, "")
+    ex = f" 今は『{example}』を候補にしています。" if example else ""
+    want = " 無駄遣いにならず、後悔しない選択にしたいです。"
+    return f"{base} 状況は『{situation}』です。{ex}{want}"
 
-# 気持ち（感情手がかり）
-FEELINGS = ["不安", "焦り", "ワクワク", "めんどう", "自信がない", "期待している"]
+# ------ UI：簡単入力（選択式） ------
+st.header("1. かんたん入力（選択式）")
+t = st.segmented_control("テーマを選ぶ", THEMES, key="easy_theme")  # Streamlit 1.41+ / 古い場合は radio に変更
+if isinstance(t, int):  # 古いバージョン保険
+    st.session_state.easy_theme = THEMES[t]
 
-col1, col2 = st.columns(2)
-with col1:
-    theme = st.radio("テーマを選ぶ", THEMES, key="ei_theme")
-with col2:
-    situation = st.selectbox("状況を選ぶ", SITUATIONS, key="ei_situation")
+sits = SITUATIONS.get(st.session_state.easy_theme, [])
+st.selectbox("状況を選ぶ", sits, key="easy_situation")
 
-example = st.selectbox("具体例を選ぶ", EXAMPLES.get(situation, []), key="ei_example")
+ex_list = EXAMPLES.get((st.session_state.easy_theme, st.session_state.easy_situation), [])
+cols = st.columns(3)
+with cols[0]:
+    st.selectbox("具体例", ex_list[:max(1,len(ex_list)//3)], key="easy_example_left")
+with cols[1]:
+    st.selectbox("　", ex_list[max(1,len(ex_list)//3):max(2,2*len(ex_list)//3)], key="easy_example_mid", label_visibility="collapsed")
+with cols[2]:
+    st.selectbox("　", ex_list[max(2,2*len(ex_list)//3):], key="easy_example_right", label_visibility="collapsed")
 
-col3, col4 = st.columns(2)
-with col3:
-    goal = st.selectbox("今回の目的（優先したいこと）", GOALS, key="ei_goal")
-with col4:
-    feeling = st.selectbox("いまの気持ちに近いもの", FEELINGS, key="ei_feeling")
+# 3つの箱のどれかに入った値を採用
+picked_example = (
+    st.session_state.get("easy_example_left")
+    or st.session_state.get("easy_example_mid")
+    or st.session_state.get("easy_example_right")
+    or ""
+)
+st.session_state.easy_example = picked_example
 
-# 選択肢（カンマ区切り編集可）: 状況に応じた初期値
-DEFAULT_CHOICES = {
-    "買うか迷う": "今すぐ買う, 少し待つ, 今回は見送る",
-    "転職/異動を検討": "現職に残る, 異動に挑戦, 転職活動を始める",
-    "学習計画を立てる": "週3で続ける, 週1に減らす, いったん中断",
-    "上司/同僚へ依頼・交渉": "すぐ相談する, メールで伝える, 次回に回す",
-    "貯金/投資の方針": "積立額を増やす, 現状維持, いったん停止",
-    "引っ越し/更新の判断": "更新して継続, 引っ越し先を探す, 実家/シェアを検討",
-}
-choices_text = st.text_input(
-    "選択肢（カンマ区切りで編集可）",
-    value=DEFAULT_CHOICES.get(situation, "A案, B案, C案"),
-    key="ei_choices",
+# プレビューを都度作る
+st.session_state.easy_preview = build_preview(
+    st.session_state.easy_theme,
+    st.session_state.easy_situation,
+    st.session_state.easy_example
 )
 
-# --- 自動プレビュー（編集可） ---
-def build_preview(theme, situation, example, goal, feeling, choices_text):
-    choices = [c.strip() for c in (choices_text or "").split(",") if c.strip()]
-    c_txt = "、".join(choices[:3])  # 3つまで表示
-    return (
-        f"{example} を検討しています（テーマ：{theme} / 状況：{situation}）。"
-        f" いまの気持ちは『{feeling}』です。"
-        f" 今回の目的は『{goal}』で、候補は「{c_txt}」。"
-        " 後で後悔しないよう、代替案や根拠をそろえて判断したいです。"
-    )
+st.caption("自動生成プレビュー（編集可）")
+st.text_area("", st.session_state.easy_preview, key="easy_preview_box", height=120)
 
-preview_text = build_preview(theme, situation, example, goal, feeling, choices_text)
-
-st.text_area(
-    "自動生成プレビュー（編集可）",
-    value=preview_text,
-    key="ei_preview",
-    height=140,
-)
-
-# 反映ボタン：下の自由入力欄（main_text）へ流し込む
-if st.button("この内容を下の入力欄へ反映", key="ei_apply", use_container_width=True):
-    st.session_state.setdefault("main_text", "")
-    # ユーザーがプレビューを編集していればそれを優先
-    st.session_state["main_text"] = st.session_state.get("ei_preview", preview_text)
-    st.success("反映しました👇『今日の意思決定（入力）』欄に記入されています。")
-    st.rerun()  # ← 重要：再描画して下の欄に即時反映
-# ====================================================================
+# 入力欄へ反映
+if st.button("この内容を下の入力欄へ反映"):
+    st.session_state.decision_text = st.session_state.easy_preview_box
+    st.success("反映しました。下の入力欄をご確認ください。")
 
 st.divider()
 
-# ---------- 3) 今日の意思決定（自由入力） ----------
-st.markdown("### 2. 今日の意思決定（入力）")
-text = st.text_area(
-    "今日、あなたが迷っていることや決めたいことを書いてください。",
-    value=st.session_state.get("main_text", ""),
-    height=180,
-    key="free_text",
-)
+# ------ 入力欄（本文） ------
+st.header("2. 今日の意思決定（入力）")
+st.caption("※ 上の反映ボタンで自動入力できます。自由に追記・編集OK。")
+st.text_area("本文", st.session_state.decision_text, key="decision_text", height=180)
 
-# ---------- 4) 解析 ----------
+
+# ========= 解析ボタン ～ 結果表示 =========
+
+# 解析用ルールを取得（あなたのファイル内の関数名に合わせてください）
+try:
+    rules = load_rules()         # すでに定義済みの関数
+except Exception as e:
+    st.error(f"ルールの読み込みに失敗しました: {e}")
+    rules = {}
+
+# 解析の感度（0～100）。上で作った slider を流用
+sensitivity = int(st.session_state.get("sensitivity", 50))
+
+# ---- 解析実行ボタン ----
 if st.button("バイアスを解析する", type="primary", use_container_width=True):
-    if not (text or "").strip():
-        st.warning("入力が空です。内容を記入してください。")
+    text = st.session_state.get("decision_text", "") or ""
+    if not text.strip():
+        st.warning("入力欄が空です。内容を記入してください。")
     else:
-        with st.spinner("考え方をチェック中..."):
-            findings, debug = analyze_text(text, RULES, st.session_state.get("sensitivity", 50))
-        st.session_state["result"] = {"findings": findings, "debug": debug, "text": text}
+        with st.spinner("解析中..."):
+            try:
+                # あなたの解析関数（既存のものを呼び出します）
+                findings, meta = analyze_text(text, rules, sensitivity)
+                st.session_state["analysis"] = {
+                    "text": text,
+                    "findings": findings,  # list[dict]
+                    "meta": meta           # {"threshold": float, "scores": {...}} など
+                }
+                st.success("解析が完了しました。結果を下に表示します。")
+            except Exception as e:
+                st.error(f"解析でエラーが発生しました: {e}")
 
-# ---------- 5) 結果表示 ----------
-if "result" in st.session_state:
-    res = st.session_state["result"]
-    st.divider()
-    st.markdown("### 3. 解析結果")
-    if not res["findings"]:
-        st.info("特に強いバイアスは検出されませんでした。バランスの良い判断です。")
+st.divider()
+
+# ---- 結果表示 ----
+if "analysis" in st.session_state:
+    data = st.session_state["analysis"]
+    findings = data.get("findings", [])
+    meta = data.get("meta", {})
+
+    st.subheader("解析結果")
+
+    if not findings:
+        st.info("明確なバイアスは検出されませんでした。")
     else:
-        for f in res["findings"]:
-            st.markdown(f"""
-            <div class="result-card">
-                <h4>{f["label"]}
-                    <span class="badge">信頼度: {f["confidence"]}</span>
-                    <span class="badge">スコア: {f["score"]}</span>
-                </h4>
-                <div class="explain">{f["explain"]}</div>
-                <b>根拠:</b> {'、'.join(f["evidence"]) if f["evidence"] else 'なし'}<br>
-                <b>対策のヒント:</b>
-            </div>
-            """, unsafe_allow_html=True)
-            for tip in f["suggestions"]:
-                st.write("・" + tip)
+        # サマリー（バッジ）
+        st.markdown('<div class="badge">検出数：<b>'
+                    f'{len(findings)}</b></div>', unsafe_allow_html=True)
 
-    with st.expander("スコア詳細（上級者向け）"):
-        st.write(res["debug"])
+        # 各項目をカードで表示
+        for i, f in enumerate(findings, 1):
+            label = f.get("label", f.get("type", ""))
+            conf  = str(f.get("confidence", ""))  # "A" / "B" など
+            score = f.get("score", None)
+            evs   = f.get("evidence", []) or []
+            sugg  = f.get("suggestions", []) or []
 
-    if st.button("結果をクリアしてやり直す"):
-        st.session_state.pop("result", None)
-        st.rerun()
+            # 見出し
+            st.markdown(
+                f'<div class="result-card">'
+                f'<div class="badge">{i}</div>'
+                f'<h3>{label}</h3>'
+                f'<div class="tip">自信度：<b>{conf}</b>'
+                + (f' ・ スコア：<b>{score}</b>' if score is not None else '')
+                + '</div>',
+                unsafe_allow_html=True
+            )
+
+            # 根拠・ヒント
+            if evs:
+                st.markdown("**検出キーワード（根拠）**")
+                st.markdown("、".join([f"`{e}`" for e in evs]))
+            if sugg:
+                st.markdown("**試してみること（介入）**")
+                for s in sugg:
+                    st.markdown(f"- {s}")
+
+            st.markdown("</div>", unsafe_allow_html=True)  # .result-card を閉じる
+
+    # デバッグ（任意）
+    with st.expander("デバッグ（スコア詳細）"):
+        th = meta.get("threshold")
+        scores = meta.get("scores", {})
+        if th is not None:
+            st.caption(f"しきい値：{th}")
+        if scores:
+            # スコアを降順で見やすく
+            ordered = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            st.table({"指標": [k for k, _ in ordered],
+                      "スコア": [round(v, 2) for _, v in ordered]})
+        else:
+            st.caption("詳細スコアはありません。")
+
+    # クリアボタン
+    if st.button("結果をクリアしてやり直す", use_container_width=True):
+        for k in ("analysis",):
+            st.session_state.pop(k, None)
+        st.rerun()  # experimental_rerun の代わりにこちらを使用
 

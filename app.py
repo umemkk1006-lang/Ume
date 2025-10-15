@@ -175,6 +175,24 @@ if "ai_result" in st.session_state:
     st.markdown("---")
     st.subheader("AI解析結果")
     st.markdown(st.session_state["ai_result"])
+    
+# ---- AI簡易解析 実行ボタン（既存の処理はそのままでOK）----
+# submit = st.form_submit_button("AIで解析する")   ←既存
+# if submit:
+#     ... analyze_with_ai(...) → st.session_state["ai_quick"] = 解析結果
+
+# ---- ここからが新規：結果カードを常時表示 ----
+st.markdown('<div class="ai-result">', unsafe_allow_html=True)
+
+ai_quick = st.session_state.get("ai_quick")
+if ai_quick:
+    # 解析結果あり → カードに表示
+    st.markdown(f'<div class="card"><pre>{ai_quick}</pre></div>', unsafe_allow_html=True)
+else:
+    # 未実行/空 → プレースホルダーを表示（スペース確保）
+    st.markdown('<div class="card muted">AIの解析結果がここに表示されます。</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # === モバイル最適化CSS ===
@@ -255,7 +273,51 @@ p, .stMarkdown {
 </style>
 """, unsafe_allow_html=True)
 
-if st.button("解析入力に進む", type="primary"):
+# ---- Page-wide styles ----
+st.markdown("""
+<style>
+/* 中央寄せ＋幅の制御 */
+.center-btn { display:flex; justify-content:center; }
+.center-btn .stButton { width: 100%; max-width: 360px; }
+
+/* 大きめ・薄色のボタン（このブロック内のボタンだけ効く） */
+.center-btn button {
+  padding: 1.0rem 1.2rem;
+  font-size: 1.05rem;
+  border-radius: 10px;
+  background: #eaf6f3;         /* 薄いミント */
+  color: #0f766e;               /* 濃いグリーン */
+  border: 1px solid #cfe7e2;
+}
+
+/* AI結果カード（常に枠を見せる） */
+.ai-result .card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: .9rem 1rem;
+  background: #ffffff;
+  min-height: 120px;            /* スペースを確保 */
+}
+.ai-result .card.muted{
+  background:#fafafa;
+  color:#6b7280;
+}
+.ai-result pre{
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ---- 2ページ目へ（大きく薄色の中央ボタン）----
+st.markdown('<div class="center-btn">', unsafe_allow_html=True)
+goto_bias = st.button("🧠 バイアス解析アプリ", key="goto_bias", use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+if goto_bias:
     st.switch_page("pages/1_解析.py")
+
 
 
