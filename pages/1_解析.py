@@ -3,6 +3,7 @@
 
 import os, json
 import streamlit as st
+from datetime import datetime
 
 # ---- Hero / Page header (復元) ----
 st.markdown("""
@@ -139,9 +140,6 @@ def analyze_text(text: str, rules: dict, sensitivity: int):
     findings.sort(key=lambda x: x.get("score", 0.0), reverse=True)
     return findings, {"threshold": round(threshold, 2), "scores": debug_scores}
 
-# --- 必須インポート（ページ冒頭） ---
-import streamlit as st
-from datetime import datetime
 
 # ------ セッション初期化 ------
 for k, v in {
@@ -154,43 +152,75 @@ for k, v in {
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ------ CSS：スマホで見やすいサイズを強制適用 ------
 st.markdown("""
 <style>
-/* Streamlit は内部で h1,h2 に別の余白/サイズを当てるため、スコープ広めに指定 */
-.stApp div.block-container h1 {
-  font-size: 1.25rem;           /* ← タイトル小さめ */
-  line-height: 1.35;
-  margin: .6rem 0 .4rem 0;
+/* ヘッダーまわり */
+h1 { font-size: 1.35rem !important; text-align:center; margin: .2rem 0 .6rem; }
+.subtitle { text-align:center; font-size:.95rem; color:#6c757d; margin-bottom:.8rem; }
+
+/* セクション見出し（「1. かんたん入力」など） */
+.section-title { font-size:1.10rem !important; margin:.9rem 0 .4rem; }
+
+/* 説明テキスト */
+.tip { font-size:.92rem; color:#666; }
+
+/* プレビューと結果カード */
+.card { border:1px solid #e6e6e6; border-radius:10px; padding:.9rem; background:#fafafa; }
+.card.muted { background:#fcfcfc; color:#999; }
+
+/* ボタンを中央・大きめ・薄色 */
+.center-btn { display:flex; justify-content:center; margin: .8rem 0 1.2rem; }
+.center-btn .stButton > button {
+  width:100%; max-width: 420px; padding: 1.0rem 1.2rem;
+  font-size:1.05rem; border-radius: 10px;
+  background:#eaf6f3; color:#0f766e; border:1px solid #cfe7e2;
 }
-.stApp div.block-container h2 {
-  font-size: 1.05rem;
-  margin: .9rem 0 .45rem 0;
-}
-.small-note { font-size:.85rem; color:#666; }
-.preview-card{
-  border:1px solid #e9e9ee; border-radius:10px; padding:.8rem; background:#fafbff;
+@media (max-width: 480px) {
+  h1 { font-size:1.2rem !important; }
+  .section-title { font-size:1.05rem !important; }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ========================
-# 1. かんたん入力（選択式）
-# ========================
-
-# セッション初期化（なければ）
-for k, v in {
-    "easy_theme": None,
-    "easy_situation": None,
-    "easy_example": None,
-    "easy_preview": "",
-    "decision_text": ""
-}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-
-st.markdown("### 1. かんたん入力（選択式）")
+# --- 1) かんたん入力（選択式） ---
+st.markdown('<h2 class="section-title">1. かんたん入力（選択式）</h2>', unsafe_allow_html=True)
 st.caption("※ テーマ → 状況 → 具体例 を選ぶと、下に文章が自動生成されます。必要なら編集して『この内容を下の入力欄へ反映』を押してください。")
+
+# セッション初期化
+for k, v in {
+    "easy_theme": "お金・家計",
+    "easy_situation": "",
+    "easy_example": "",
+    "easy_preview": "",
+    "decision_text": "",
+}.items():
+    st.session_state.setdefault(k, v)
+
+# テーマ
+theme = st.radio("テーマを選ぶ", THEMES, horizontal=True, key="easy_theme")
+
+# 状況
+situations = SITUATIONS.get(theme, [])
+situation = st.selectbox("状況を選ぶ", situations, key="easy_situation")
+
+# 具体例（単一の selectbox）
+examples = EXAMPLES.get((theme, situation), [])
+example = st.selectbox("具体例", examples, key="easy_example")
+
+# プレビュー生成
+if example:
+    st.session_state.easy_preview = example
+
+# ▼ 自動生成プレビュー（編集可）
+st.markdown('#### 自動生成プレビュー（編集可）')
+st.session_state.easy_preview = st.text_area(
+    "", st.session_state.easy_preview, height=120, key="preview_area"
+)
+
+# 反映ボタン（プレビューのすぐ下に配置）
+if st.button("この内容を下の入力欄へ反映"):
+    st.session_state.decision_text = st.session_state.easy_preview
+    st.success("反映しました。下の『2. 今日の意思決定（入力）』をご確認ください。")
 
 # --- マスタ定義（20代会社員を想定） ---
 THEMES = ["お金・家計", "仕事・キャリア", "スキル・学習", "人間関係（職場）", "健康・生活リズム", "住まい・暮らし"]
@@ -267,15 +297,32 @@ with col_a:
         st.success("反映しました。下の『2. 今日の意思決定（入力）』をご確認ください。")
 with col_b:
     st.caption("※ 反映後も自由に加筆修正できます。")
+# --- 2) 今日の意思決定（入力） ---
+st.markdown('<h2 class="section-title">2. 今日の意思決定（入力）</h2>', unsafe_allow_html=True)
+st.caption("※ 上の反映ボタンで自動入力できます。自由に追記・修正もOK。")
 
-# ---------- 4) 解析 ----------
-if st.button("バイアスを解析する", type="primary", use_container_width=True):
-    if not (text or "").strip():
-        st.warning("入力が空です。内容を記入してください。")
+st.session_state.decision_text = st.text_area(
+    "本文", st.session_state.get("decision_text", ""), height=180, key="decision_area"
+)
+
+# --- 3) 解析 ---
+text = (st.session_state.get("decision_text") or "").strip()
+
+st.markdown('<div class="center-btn">', unsafe_allow_html=True)
+clicked = st.button("バイアスを解析する")
+st.markdown('</div>', unsafe_allow_html=True)
+
+if clicked:
+    if not text:
+        st.warning("入力が空です。内容をご記入ください。")
     else:
-        with st.spinner("考え方をチェック中..."):
-            findings, debug = analyze_text(text, RULES, st.session_state.get("sensitivity", 50))
-        st.session_state["result"] = {"findings": findings, "debug": debug, "text": text}
+        with st.spinner("考え方をチェック中…"):
+            findings, debug = analyze_text(
+                text, RULES, st.session_state.get("sensitivity", 44)
+            )
+            st.session_state["result"] = {"findings": findings, "debug": debug}
+        st.rerun()
+
 
 # ---------- 5) 結果表示 ----------
 if "result" in st.session_state:
