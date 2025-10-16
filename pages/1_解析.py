@@ -15,21 +15,20 @@ def k(name: str) -> str:
 # =========================
 st.markdown("""
 <style>
-.block-container{max-width:720px;margin:auto;padding-top:.6rem;padding-bottom:2rem;}
-h1{font-size:1.4rem !important;margin:.2rem 0 .6rem 0;text-align:center;}
-h2, .stSubheader{font-size:1.08rem !important;margin:1.2rem 0 .6rem 0;}
-p,.stMarkdown{font-size:.95rem;line-height:1.6;color:#333;}
+.block-container{max-width:720px;margin:auto;}
+h1{font-size:1.6rem !important;margin:1.8rem 0 1rem 0;}   /* ←タイトルを少し大きく */
+h2, .stSubheader{font-size:1.1rem !important;}            /* ←サブ見出しを少し小さく */
+p, .stMarkdown{font-size:.95rem;line-height:1.6;}         
 .small{color:#667085;font-size:.88rem;}
-.badge{display:inline-block;background:#eef6ff;border:1px solid #cfe2ff;border-radius:6px;padding:.12rem .5rem;margin-left:.4rem;font-size:.8rem;}
-.card{border:1px solid #e5e7eb;border-radius:10px;padding:0.8rem;margin:.5rem 0;background:#fff;}
-.stButton>button{font-size:.95rem;padding:.55rem 1.1rem;border-radius:8px;}
+.stButton>button{font-size:.95rem;padding:.35rem 1rem;}
 @media(max-width:480px){
-  h1{font-size:1.25rem !important;}
-  h2,.stSubheader{font-size:.94rem !important;}
-  p,.stMarkdown{font-size:.92rem;}
+    h1{font-size:1.4rem !important;}   /* モバイルでは少し抑える */
+    h2, .stSubheader{font-size:1.0rem !important;}
+    p, .stMarkdown{font-size:.92rem;}
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # =========================
 # ヘッダー
