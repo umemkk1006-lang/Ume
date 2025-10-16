@@ -303,22 +303,31 @@ st.markdown("""
   white-space: pre-wrap;
   word-break: break-word;
 
-/* --- 下部の大きなボタンを装飾 --- */
-div[data-testid="stButton"] > button[kind="secondary"] {
-    background-color: #ff7eb9;   /* 背景ピンク */
-    color: white;                /* 文字色 */
-    border: none;                /* 枠線なし */
-    border-radius: 10px;         /* 角を丸く */
-    font-size: 1.2em;            /* フォント大きく */
-    font-weight: bold;           /* 太字 */
-    padding: 0.8em 1.2em;        /* 余白広め */
-    box-shadow: 0px 4px 8px rgba(0,0,0,0.2);  /* 影を付けて浮かせる */
-    transition: all 0.3s ease;   /* アニメーション */
+/* --- 下部の大きなボタンを装飾（立体グリーンVer）--- */
+div.stButton > button {
+    background: linear-gradient(145deg, #b8eacb, #9fd8b3); /* 柔らかなグラデーション */
+    color: #ffffff !important;    /* 白文字 */
+    border: none;                 /* 枠線なし */
+    border-radius: 14px;          /* 丸みを強調 */
+    font-size: 1.2em;             /* フォント少し大きく */
+    font-weight: bold;            /* 太字 */
+    padding: 0.9em 1.4em;         /* 余白を広めに */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15); /* 立体感の影 */
+    transition: all 0.25s ease;
 }
 
-div[data-testid="stButton"] > button[kind="secondary"]:hover {
-    background-color: #ff4fa3;   /* 濃いピンクに変化 */
-    transform: scale(1.05);      /* ホバーで少し拡大 */
+/* --- ホバー時のエフェクト --- */
+div.stButton > button:hover {
+    background: linear-gradient(145deg, #a2e2bb, #8fd0a9); /* 少し濃い緑に変化 */
+    transform: translateY(-3px) scale(1.03);                /* 浮き上がり効果 */
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* --- 押したとき（クリック時） --- */
+div.stButton > button:active {
+    background: linear-gradient(145deg, #91cfa5, #7bc594);
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 }
