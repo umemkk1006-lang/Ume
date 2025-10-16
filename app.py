@@ -334,6 +334,7 @@ st.markdown("""
 # ---- 2ページ目へ（大きく薄色の中央ボタン）----
 st.markdown('<div id="cta" class="center-btn">', unsafe_allow_html=True)
 goto_bias = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
+type="primary"
 st.markdown('</div>', unsafe_allow_html=True)
 
 if goto_bias:
