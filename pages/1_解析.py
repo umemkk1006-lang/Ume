@@ -186,38 +186,55 @@ h1 { font-size: 1.35rem !important; text-align:center; margin: .2rem 0 .6rem; }
 st.markdown('<h2 class="section-title">1. かんたん入力（選択式）</h2>', unsafe_allow_html=True)
 st.caption("※ テーマ → 状況 → 具体例 を選ぶと、下に文章が自動生成されます。必要なら編集して『この内容を下の入力欄へ反映』を押してください。")
 
-# セッション初期化
-for k, v in {
-    "easy_theme": "お金・家計",
-    "easy_situation": "",
-    "easy_example": "",
-    "easy_preview": "",
-    "decision_text": "",
-}.items():
-    st.session_state.setdefault(k, v)
+# ❶ 未定義ガード（存在しない場合はデフォルトを入れる）
+if "THEMES" not in globals():
+    THEMES = ["お金・家計", "仕事・キャリア", "スキル・学習", "人間関係（職場）", "健康・生活リズム", "住まい・暮らし"]
+if "SITUATIONS" not in globals():
+    SITUATIONS = {
+        "お金・家計": ["買うか迷う", "固定費の見直し", "投資の判断"],
+        "仕事・キャリア": ["転職を考える", "資格を取るか迷う", "上司への相談"],
+        "スキル・学習": ["講座を受ける", "独学かスクールか", "学習計画を立てる"],
+        "人間関係（職場）": ["依頼を断る", "会議で発言する", "フィードバックを求める"],
+        "健康・生活リズム": ["運動を始める", "夜更かしをやめる", "間食を減らす"],
+        "住まい・暮らし": ["家具を買う", "引っ越しを検討", "サブスク解約"],
+    }
+if "EXAMPLES" not in globals():
+    EXAMPLES = {
+        ("お金・家計", "買うか迷う"): [
+            "PCを買う／良い条件に感じるが無駄遣いにならないか不安。判断材料や代替案も考慮したい。",
+            "スマホを買い替え／割引が魅力だが本当に必要か迷う。今の端末でも十分か検討したい。",
+            "大型家電を買う／セール中だが長期的な費用や設置スペースも含めて考えたい。"
+        ],
+        # …他のキーも必要に応じて追加 …
+    }
 
-# テーマ
-theme = st.radio("テーマを選ぶ", THEMES, horizontal=True, key="easy_theme")
+# ❷ セッション初期化（上書きしない）
+st.session_state.setdefault("easy_theme", THEMES[0])
+st.session_state.setdefault("easy_situation", "")
+st.session_state.setdefault("easy_example", "")
+st.session_state.setdefault("easy_preview", "")
+st.session_state.setdefault("decision_text", "")
 
-# 状況
+# ❸ テーマ選択（horizontal を付けない＝古い Streamlit でもOK）
+theme = st.radio("テーマを選ぶ", options=THEMES, key="easy_theme")
+
+# ❹ 状況 → 具体例
 situations = SITUATIONS.get(theme, [])
-situation = st.selectbox("状況を選ぶ", situations, key="easy_situation")
+situation = st.selectbox("状況を選ぶ", options=situations, key="easy_situation")
 
-# 具体例（単一の selectbox）
 examples = EXAMPLES.get((theme, situation), [])
-example = st.selectbox("具体例", examples, key="easy_example")
+example = st.selectbox("具体例", options=examples, key="easy_example")
 
-# プレビュー生成
+# ❺ プレビュー生成＆編集
 if example:
     st.session_state.easy_preview = example
 
-# ▼ 自動生成プレビュー（編集可）
 st.markdown('#### 自動生成プレビュー（編集可）')
 st.session_state.easy_preview = st.text_area(
     "", st.session_state.easy_preview, height=120, key="preview_area"
 )
 
-# 反映ボタン（プレビューのすぐ下に配置）
+# ❻ 反映ボタン（プレビュー直下）
 if st.button("この内容を下の入力欄へ反映"):
     st.session_state.decision_text = st.session_state.easy_preview
     st.success("反映しました。下の『2. 今日の意思決定（入力）』をご確認ください。")
