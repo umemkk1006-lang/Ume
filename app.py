@@ -303,40 +303,36 @@ st.markdown("""
   white-space: pre-wrap;
   word-break: break-word;
 
-/* --- 下部の大きなボタンを装飾（立体グリーンVer）--- */
-div.stButton > button {
-    background: linear-gradient(145deg, #b8eacb, #9fd8b3); /* 柔らかなグラデーション */
-    color: #ffffff !important;    /* 白文字 */
-    border: none;                 /* 枠線なし */
-    border-radius: 14px;          /* 丸みを強調 */
-    font-size: 1.2em;             /* フォント少し大きく */
-    font-weight: bold;            /* 太字 */
-    padding: 0.9em 1.4em;         /* 余白を広めに */
-    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15); /* 立体感の影 */
-    transition: all 0.25s ease;
+<style>
+/* ---- CTAボタン専用スタイル（強制上書き） ---- */
+#cta .stButton > button,
+#cta div.stButton > button[kind],
+#cta div.stButton > button {
+  background: linear-gradient(145deg, #91cfa5, #7bc594) !important; /* 好きな色に変更OK */
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  padding: 0.9em 1.2em !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15) !important;
+  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease !important;
 }
-
-/* --- ホバー時のエフェクト --- */
-div.stButton > button:hover {
-    background: linear-gradient(145deg, #a2e2bb, #8fd0a9); /* 少し濃い緑に変化 */
-    transform: translateY(-3px) scale(1.03);                /* 浮き上がり効果 */
-    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+#cta .stButton > button:hover {
+  filter: brightness(0.95) !important;
+  transform: translateY(-2px) !important;
 }
-
-/* --- 押したとき（クリック時） --- */
-div.stButton > button:active {
-    background: linear-gradient(145deg, #91cfa5, #7bc594);
-    transform: translateY(1px) scale(0.98);
-    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.15);
-}
-
+#cta .stButton > button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12) !important;
 }
 </style>
+
 """, unsafe_allow_html=True)
 
 
 # ---- 2ページ目へ（大きく薄色の中央ボタン）----
-st.markdown('<div class="center-btn">', unsafe_allow_html=True)
+st.markdown('<div id="cta" class="center-btn">', unsafe_allow_html=True)
 goto_bias = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
