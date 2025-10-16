@@ -25,7 +25,7 @@ p,.stMarkdown{font-size:.95rem;line-height:1.6;color:#333;}
 .stButton>button{font-size:.95rem;padding:.55rem 1.1rem;border-radius:8px;}
 @media(max-width:480px){
   h1{font-size:1.25rem !important;}
-  h2,.stSubheader{font-size:1.0rem !important;}
+  h2,.stSubheader{font-size:.94rem !important;}
   p,.stMarkdown{font-size:.92rem;}
 }
 </style>
@@ -71,7 +71,6 @@ user_text = st.text_area("今の気持ちや状況を1〜3行で。空でもOK�
 # =========================
 if st.button("解析する", type="primary", key=k("analyze_btn")):
     findings, dbg = None, {}
-    findings = analyze_selection(theme, situation, sign, user_text)
     st.session_state[k("findings")] = findings
     st.success("解析しました。下の結果をご確認ください。")
 

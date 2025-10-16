@@ -176,10 +176,6 @@ if "ai_result" in st.session_state:
     st.subheader("AI解析結果")
     st.markdown(st.session_state["ai_result"])
     
-# ---- AI簡易解析 実行ボタン（既存の処理はそのままでOK）----
-# submit = st.form_submit_button("AIで解析する")   ←既存
-# if submit:
-#     ... analyze_with_ai(...) → st.session_state["ai_quick"] = 解析結果
 
 # ---- ここからが新規：結果カードを常時表示 ----
 st.markdown('<div class="ai-result">', unsafe_allow_html=True)
