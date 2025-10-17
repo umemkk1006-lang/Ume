@@ -1,7 +1,5 @@
 import random
-# =========================
-# ---------- ロジック ----------
-# =========================
+import streamlit as st
 
 def confidence_letter(score: float):
     """0.0〜1.0をA/B/Cの確からしさに変換"""
