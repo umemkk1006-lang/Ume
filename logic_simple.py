@@ -1,6 +1,6 @@
-import random
-import streamlit as st
 
+import streamlit as st
+import random
 def confidence_letter(score: float):
     """0.0〜1.0をA/B/Cの確からしさに変換"""
     if score >= 0.8: return "A", "高い（かなり当てはまりそう）"
@@ -8,23 +8,25 @@ def confidence_letter(score: float):
     return "C", "低め（参考程度）"
 
 def render_finding_card(f: dict):
-    """1件分のカード表示（やさしい説明つき）"""
     label = f.get("label", "（名称未設定）")
     score = float(f.get("score", 0.0) or 0.0)
-    letter, expl = confidence_letter(score)
-    tips = f.get("suggestions", [])
-    evid = f.get("evidence", [])
-    why = f.get("why", "")
+    tips  = f.get("suggestions") or []
+    evid  = f.get("evidence") or []
+    why   = f.get("why") or ""
 
-    st.markdown(f'<div class="card"><b>{label}</b><span class="badge">確からしさ: {letter}</span><br><span class="small">{expl}</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="card"><b>{label}</b><span class="badge">確からしさ: {score:.2f}</span></div>', unsafe_allow_html=True)
+
     if why:
-        st.markdown(f"**なぜ？（短い説明）**  {why}")
+        st.markdown(f"**なぜ？（短い説明）**　{why}")
+
     if evid:
-        st.caption("ヒントになった言葉：" + "、".join(evid[:3]))
+        st.caption("ヒントになった言葉: " + "、".join(list(map(str, evid))[:3]))
+
     if tips:
         st.markdown("**すぐ試せる対処**")
         for t in tips[:4]:
-            st.markdown("- " + t)
+            st.markdown("- " + str(t))
+
 
 def analyze_selection(theme: str, situation: str, sign: str, text: str):
     """
