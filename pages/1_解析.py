@@ -2,7 +2,7 @@
 # pages/2_バイアス解析.py
 
 import streamlit as st
-
+from logic_simple import analyze_selection   
 # =========================
 # ページ固有のキー（衝突防止）
 # =========================
@@ -70,8 +70,7 @@ user_text = st.text_area("今の気持ちや状況を1〜3行で。空でもOK�
 # ==========
 if st.button("解析する", type="primary", key=k("analyze_btn")):
     # --- ここで簡単解析ロジックを呼ぶ ---
-    findings, dbg = analyze_selection(theme=None, situation=None, sign=None, user_text=user_text), {}
-
+    findings = analyze_selection(theme, situation, sign, user_text)
     # 結果をセッションに保存（None防止）
     st.session_state[k("findings")] = findings or []
     st.session_state[k("debug")] = dbg

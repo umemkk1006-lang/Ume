@@ -330,6 +330,7 @@ button[data-testid="stBaseButton-primary"]:hover {
 <style>
 #cta-wrap{
   margin: 0px 0 96px;   /* 上24px, 下96px 余白を確保 */
+　padding-top: 0 !important;
   display: flex;
   justify-content: center;
 }
