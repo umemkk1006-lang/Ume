@@ -1,10 +1,3 @@
-from pathlib import Path
-import streamlit as st
-
-st.caption(f"Running from: **{Path(__file__).resolve()}**")
-st.caption(f"Streamlit version: **{__import__('streamlit').__version__}**")
-
-
 # -*- coding: utf-8 -*-
 import json, os
 from datetime import datetime
@@ -310,42 +303,30 @@ st.markdown("""
   white-space: pre-wrap;
   word-break: break-word;
 
+st.markdown("""
 <style>
-/* ---- CTAボタン専用スタイル（強制上書き） ---- */
-#cta .stButton > button,
-#cta div.stButton > button[kind],
-#cta div.stButton > button {
-  background: linear-gradient(145deg, #91cfa5, #7bc594) !important; /* 好きな色に変更OK */
-  color: #ffffff !important;
-  border: none !important;
-  border-radius: 14px !important;
-  font-size: 1.15rem !important;
-  font-weight: 700 !important;
-  padding: 0.9em 1.2em !important;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15) !important;
-  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease !important;
+/* Streamlit 1.50以降対応ボタンスタイル */
+.st-emotion-cache-7ym5gk button,
+button[data-testid="stBaseButton-primary"],
+button[data-testid="stBaseButton-secondary"],
+div.stButton > button {
+    background-color: #7AA5A0 !important;  /* ← ボタンの色 */
+    color: white !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    border: none !important;
+    font-size: 1.1rem !important;
+    padding: 0.8em 1.3em !important;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.15) !important;
 }
-#cta .stButton > button:hover {
-  filter: brightness(0.95) !important;
-  transform: translateY(-2px) !important;
-}
-#cta .stButton > button:active {
-  transform: translateY(0) !important;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.12) !important;
+.st-emotion-cache-7ym5gk button:hover,
+button[data-testid="stBaseButton-primary"]:hover {
+    filter: brightness(0.95) !important;
 }
 </style>
-
 """, unsafe_allow_html=True)
 
 
-# ---- 2ページ目へ（大きく薄色の中央ボタン）----
-st.markdown('<div id="cta" class="center-btn">', unsafe_allow_html=True)
 goto_bias = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
-type="primary"
-st.markdown('</div>', unsafe_allow_html=True)
-
-if goto_bias:
-    st.switch_page("pages/1_解析.py")
-
 
 
