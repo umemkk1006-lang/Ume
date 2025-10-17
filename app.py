@@ -328,4 +328,48 @@ button[data-testid="stBaseButton-primary"]:hover {
 </style>
 """, unsafe_allow_html=True)
 
-goto_bias = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
+# ---- 下部CTA（ページ遷移） ----
+st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
+clicked = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+if clicked:
+    try:
+        # ① ファイルパスで遷移（pages/配下の実ファイル名に合わせて）
+        st.switch_page("pages/1_解析.py")
+    except Exception:
+       # ---- 下部CTA（ページ遷移） ----
+st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
+clicked = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+if clicked:
+    try:
+        # ① ファイルパスで遷移（pages/配下の実ファイル名に合わせて）
+        st.switch_page("1_解析.py")
+    except Exception:
+        # ② うまくいかない場合はメニュー名（サイドバーに表示されるページ名）で遷移
+        try:
+            from streamlit_extras.switch_page_button import switch_page
+            switch_page("1_解析.py")   # ← サイドバーに出るページ名に合わせて。例）"1 解析" / "1_解析"
+        except Exception as e:
+            st.error(f"ページ遷移に失敗しました: {e}")
+
+        except Exception as e:
+            st.error(f"ページ遷移に失敗しました: {e}")
+
+
+st.markdown("<div style='height: 80px'></div>", unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
