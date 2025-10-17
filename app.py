@@ -326,7 +326,25 @@ button[data-testid="stBaseButton-primary"]:hover {
     filter: brightness(0.95) !important;
 }
 </style>
+            
+<style>
+#cta-wrap{
+  margin: 24px 0 96px;   /* 上24px, 下96px 余白を確保 */
+  display: flex;
+  justify-content: center;
+}
+#cta-wrap .stButton > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;  /* テキスト中央揃え */
+  gap: .5rem;               /* 絵文字とのすき間 */
+  min-height: 54px;         /* ボタン高さを安定させる */
+}
+</style>
+            
 """, unsafe_allow_html=True)
+
+
 
 # ---- 下部CTA（ページ遷移） ----
 st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
@@ -358,9 +376,7 @@ if clicked:
         except Exception as e:
             st.error(f"ページ遷移に失敗しました: {e}")
 
-
-st.markdown("<div style='height: 80px'></div>", unsafe_allow_html=True)
-
+            
 
 
 
