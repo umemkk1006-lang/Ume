@@ -302,6 +302,8 @@ st.markdown("""
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -326,7 +328,4 @@ button[data-testid="stBaseButton-primary"]:hover {
 </style>
 """, unsafe_allow_html=True)
 
-
 goto_bias = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
-
-
