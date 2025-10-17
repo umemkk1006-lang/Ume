@@ -330,15 +330,4 @@ st.markdown("""
 
 """, unsafe_allow_html=True)
 
-
-# ---- 2ページ目へ（大きく薄色の中央ボタン）----
-st.markdown('<div id="cta" class="center-btn">', unsafe_allow_html=True)
-goto_bias = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
-type="primary"
-st.markdown('</div>', unsafe_allow_html=True)
-
-if goto_bias:
-    st.switch_page("pages/1_解析.py")
-
-
-
+st.page_link("pages/1_解析.py", label="🧠 バイアスを解析する", use_container_width=True)
