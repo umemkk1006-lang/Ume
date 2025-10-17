@@ -7,20 +7,25 @@ def confidence_letter(score: float):
     if score >= 0.6: return "B", "中くらい（それっぽいが他の可能性も）"
     return "C", "低め（参考程度）"
 
-def render_finding_card(f: dict):
-    label = f.get("label", "（名称未設定）")
-    score = float(f.get("score", 0.0) or 0.0)
-    tips  = f.get("suggestions") or []
-    evid  = f.get("evidence") or []
-    why   = f.get("why") or ""
+import streamlit as st  # ←先頭に入っていることを確認
 
-    st.markdown(f'<div class="card"><b>{label}</b><span class="badge">確からしさ: {score:.2f}</span></div>', unsafe_allow_html=True)
+def render_finding_card(f: dict):
+    # 安全な取り出し（型も整える）
+    label = str(f.get("label", "（名称未設定）"))
+    score = float(f.get("score", 0.0) or 0.0)
+    tips  = list(f.get("suggestions") or [])
+    evid  = list(f.get("evidence") or [])
+    why   = str(f.get("why", ""))
+
+    st.markdown(f'<div class="card"><b>{label}</b>'
+                f'<span class="badge">確からしさ: {score:.2f}</span></div>',
+                unsafe_allow_html=True)
 
     if why:
         st.markdown(f"**なぜ？（短い説明）**　{why}")
 
     if evid:
-        st.caption("ヒントになった言葉: " + "、".join(list(map(str, evid))[:3]))
+        st.caption("ヒントになった言葉: " + "、".join(map(str, evid[:3])))
 
     if tips:
         st.markdown("**すぐ試せる対処**")
