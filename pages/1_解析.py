@@ -2,7 +2,9 @@
 # pages/2_バイアス解析.py
 
 import streamlit as st
-from logic_simple import analyze_selection, confidence_letter
+
+from logic_simple import analyze_selection, render_finding_card
+
  
 # =========================
 # ページ固有のキー（衝突防止）
