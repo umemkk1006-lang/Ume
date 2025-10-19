@@ -137,33 +137,25 @@ TIPS = [
     {"title": "選択的注意", "body": "自分が関心ある情報ばかり目に入り、他を見落とす。例：欲しい車の広告ばかり目につく。"},
     {"title": "ダニング＝クルーガー効果", "body": "知識が浅い人ほど自信過剰になる傾向。例：初心者が“もう完璧に理解した”と思い込む。"}
 ]
-import datetime
-
-VERSION = "tips-2025-10-19-01"  # 変更したら必ず文字列を変える
-today = datetime.date.today().isoformat()
-
-tips_pool_key = f"tips_pool__{VERSION}__{today}"
-tips_seen_key = f"tips_seen__{VERSION}__{today}"
-
-# 初期化
-if tips_pool_key not in st.session_state:
-    st.session_state[tips_pool_key] = TIPS[:]   # 新しいリストを丸ごとコピー
-    st.session_state[tips_seen_key] = set()
-
+# --- 開発用：豆知識キャッシュを強制リセット ---
+for k in list(st.session_state.keys()):
+    if "tips_pool" in k or "tips_seen" in k:
+        del st.session_state[k]
+st.experimental_rerun()
 
 
 # セッションに「すでに見たネタ」を記録して重複を減らす
-if "tips_seen_key" not in st.session_state:
-    st.session_state["tips_seen_key"] = set()
+if "tips_seen" not in st.session_state:
+    st.session_state["tips_seen"] = set()
 
 remaining = [i for i in range(len(TIPS)) if i not in st.session_state["tips_seen"]]
 if not remaining:
     # すべて出し切ったらリセットして再びシャッフル
-    st.session_state["tips_seen_key"].clear()
+    st.session_state["tips_seen"].clear()
     remaining = list(range(len(TIPS)))
 
 idx = random.choice(remaining)
-st.session_state["tips_seen_key"].add(idx)
+st.session_state["tips_seen"].add(idx)
 tip = TIPS[idx]
 
 # === おまけ：今日の豆知識（1件だけ・ボタンは下） ===
