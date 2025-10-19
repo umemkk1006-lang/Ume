@@ -228,10 +228,6 @@ TIPS = [
 ]
 
 
-
-VERSION = "tips-2025-10-19-01"  # ←適当に更新
-st.caption(f"豆知識データ: {VERSION}")
-
 # 変更バージョン（手で上げる）—— 画面にも出す
 VERSION = "tips-2025-10-19-02"
 st.caption(f"豆知識データ：{VERSION}")
