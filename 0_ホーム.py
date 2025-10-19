@@ -71,6 +71,19 @@ from ui_components import hero, info_cards, stepper
 
 st.set_page_config(page_title="Bias Audit Lab", page_icon="🧠", layout="centered")
 
+st.markdown("""
+    <style>
+        [data-testid="stSidebar"] {
+            width: 180px !important;     /* デフォルト：約250px */
+            min-width: 180px !important; /* 念のため固定 */
+        }
+        [data-testid="stSidebarNav"] {
+            font-size: 1.2rem;           /* タブ文字を少し小さく */
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
 # --- セッション初期化 ---
 for k, v in {
     "user_input": "",
