@@ -138,11 +138,6 @@ TIPS = [
     {"title": "ダニング＝クルーガー効果", "body": "知識が浅い人ほど自信過剰になる傾向。例：初心者が“もう完璧に理解した”と思い込む。"}
 ]
 
-# --- 開発用：豆知識キャッシュを強制リセット ---
-for k in list(st.session_state.keys()):
-    if "tips_pool" in k or "tips_seen" in k:
-        del st.session_state[k]
-st.experimental_rerun()
 
 
 # セッションに「すでに見たネタ」を記録して重複を減らす
