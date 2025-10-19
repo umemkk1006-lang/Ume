@@ -389,27 +389,66 @@ button[data-testid="stBaseButton-primary"]:hover {
 
 
 
+from pathlib import Path
+import streamlit as st
+
+# --- CTAの余白調整（上を0、下だけ広め） ---
+st.markdown("""
+<style>
+#cta-wrap{
+  margin: 0 0 48px;                 /* 上0 / 下48px */
+  display:flex; justify-content:center;
+}
+#cta-wrap .stButton > button{
+  min-height: 54px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+def _goto_bias_page():
+    """
+    'pages' フォルダ内から「バイアス分析」を含むページを自動検出して遷移。
+    見つからなければエラーメッセージを表示。
+    """
+    # 1) パスで探す（ファイル名に「バイアス分析」を含む .py）
+    candidates = list(Path("pages").glob("*.py"))
+    target = None
+    for p in candidates:
+        if "バイアス分析" in p.stem:  # 例: バイアス分析.py / 1_バイアス分析.py など
+            target = p
+            break
+
+    if target is not None:
+        # 正規パスで遷移
+        st.switch_page(str(target.as_posix()))
+        return
+
+    # 2) 予備：サイドバー表示名で遷移（例: "バイアス分析" / "1 バイアス分析"）
+    try:
+        from streamlit_extras.switch_page_button import switch_page
+        switch_page("バイアス分析")
+    except Exception as e:
+        st.error("ページ『バイアス分析』が見つかりません。"
+                 "ファイルを `pages/バイアス分析.py`（またはその名前を含む）にしてください。")
+        # デバッグ用に一覧を表示（一時的に役立ちます）
+        st.caption("検出された pages/:")
+        for p in candidates:
+            st.caption(f"• {p.name}")
+
+
 def render_cta():
     st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
     clicked = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    # さらに下にスペースを足したいなら👇（任意）
-    # st.markdown("<div style='height:60px'></div>", unsafe_allow_html=True)
 
     if clicked:
-        try:
-            # ファイル名で遷移（pages/配下の実ファイル名に合わせる）
-            st.switch_page("pages/バイアス分析.py")
-        except Exception:
-            # 予備：サイドバーのページ名で遷移（例："1 解析"）
-            try:
-                from streamlit_extras.switch_page_button import switch_page
-                switch_page("解析")
-            except Exception as e:
-                st.error(f"ページ遷移に失敗: {e}")
+        _goto_bias_page()
 
-# メインのどこか（form の外）で呼び出す
+
+# ★ フォームの外で呼び出してください
 render_cta()
+
 
 
 
