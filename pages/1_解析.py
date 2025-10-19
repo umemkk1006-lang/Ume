@@ -228,7 +228,9 @@ TIPS = [
 ]
 
 
-
+# 変更バージョン（手で上げる）—— 画面にも出す
+VERSION = "tips-2025-10-19-02"
+st.caption(f"豆知識データ：{VERSION}")
 
 # バージョンが変わったらセッションを掃除
 if st.session_state.get("tips_version") != VERSION:
@@ -270,7 +272,5 @@ with st.expander("おまけ：今日の豆知識", expanded=True):
         st.session_state["tips_clicks"] += 1
         st.rerun()
 
-# 変更バージョン（手で上げる）—— 画面にも出す
-VERSION = "tips-2025-10-19-02"
-st.caption(f"豆知識データ：{VERSION}")
+
 
