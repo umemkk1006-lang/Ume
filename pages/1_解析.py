@@ -137,11 +137,17 @@ TIPS = [
     {"title": "選択的注意", "body": "自分が関心ある情報ばかり目に入り、他を見落とす。例：欲しい車の広告ばかり目につく。"},
     {"title": "ダニング＝クルーガー効果", "body": "知識が浅い人ほど自信過剰になる傾向。例：初心者が“もう完璧に理解した”と思い込む。"}
 ]
-# --- 開発用：豆知識キャッシュを強制リセット ---
-for k in list(st.session_state.keys()):
-    if "tips_pool" in k or "tips_seen" in k:
-        del st.session_state[k]
-st.experimental_rerun()
+
+VERSION = "tips-2025-10-19-01"  # ←適当に更新
+st.caption(f"豆知識データ: {VERSION}")
+
+# --- 開発用：豆知識キャッシュを強制リセット（暫定） ---
+if not st.session_state.get("tips_reset_done"):
+    for k in list(st.session_state.keys()):
+        if ("tips_pool" in k) or ("tips_seen" in k):
+            del st.session_state[k]
+    st.session_state["tips_reset_done"] = True
+    st.rerun()  # ← ここがポイント（experimental_rerun ではなく rerun）
 
 
 # セッションに「すでに見たネタ」を記録して重複を減らす
