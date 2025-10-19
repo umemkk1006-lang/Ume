@@ -126,3 +126,6 @@ def analyze_selection(theme: str, situation: str, sign: str, text: str):
     # 重複や似たものを上限3件に
     hits = sorted(hits, key=lambda x: x["score"], reverse=True)[:3]
     return hits
+
+
+
