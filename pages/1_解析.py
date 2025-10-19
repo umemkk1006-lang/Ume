@@ -150,14 +150,30 @@ idx = random.choice(remaining)
 st.session_state["tips_seen"].add(idx)
 tip = TIPS[idx]
 
-with st.expander("おまけ：今日の豆知識", expanded=False):
-    st.markdown(f"**{tip['title']}**：{tip['body']}")
-    if st.button("別の豆知識も見る", key="more_tip_btn"):
-        remaining2 = [i for i in range(len(TIPS)) if i not in st.session_state["tips_seen"]]
-        if not remaining2:
-            st.session_state["tips_seen"].clear()
-            remaining2 = list(range(len(TIPS)))
-        idx2 = random.choice(remaining2)
-        st.session_state["tips_seen"].add(idx2)
-        tip2 = TIPS[idx2]
-        st.markdown(f"**{tip2['title']}**：{tip2['body']}")
+# === おまけ：今日の豆知識（1件だけ・ボタンは下） ===
+with st.expander("おまけ：今日の豆知識", expanded=True):
+    FACTS = [
+        ("フレーミング効果", "同じ内容でも「90%成功」と言われると良く見え、「10%失敗」と言われると悪く見える。"),
+        ("アンカリング", "最初に見た数字（定価など）が頭に残り、後の判断に影響する。"),
+        ("現状維持バイアス", "今のままを選びやすい。変えるのが悪いわけじゃない。準備が大事。"),
+        # …あなたが追加した20件もこの配列に入れておいてください…
+    ]
+
+    idx_key = k("fact_idx") if 'k' in globals() else "fact_idx"
+
+    # 初期化（未設定なら 0）
+    if idx_key not in st.session_state:
+        st.session_state[idx_key] = 0
+
+    # 表示（← 先に出す：ボタンは後）
+    i = st.session_state[idx_key] % len(FACTS)
+    title, desc = FACTS[i]
+    st.markdown(f"**{title}**：{desc}")
+
+    # 次へボタン（on_click でインデックス更新 → 再実行後に上の表示が入れ替わる）
+    def _next_fact():
+        st.session_state[idx_key] = (st.session_state[idx_key] + 1) % len(FACTS)
+
+    st.button("別の豆知識も見る", key=k("fact_next") if 'k' in globals() else "fact_next",
+              on_click=_next_fact)
+
