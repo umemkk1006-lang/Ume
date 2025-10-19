@@ -141,55 +141,47 @@ TIPS = [
 VERSION = "tips-2025-10-19-01"  # ←適当に更新
 st.caption(f"豆知識データ: {VERSION}")
 
-# --- 開発用：豆知識キャッシュを強制リセット（暫定） ---
-if not st.session_state.get("tips_reset_done"):
-    for k in list(st.session_state.keys()):
-        if ("tips_pool" in k) or ("tips_seen" in k):
-            del st.session_state[k]
-    st.session_state["tips_reset_done"] = True
-    st.rerun()  # ← ここがポイント（experimental_rerun ではなく rerun）
+# 変更バージョン（手で上げる）—— 画面にも出す
+VERSION = "tips-2025-10-19-02"
+st.caption(f"豆知識データ：{VERSION}")
 
+# バージョンが変わったらセッションを掃除
+if st.session_state.get("tips_version") != VERSION:
+    for k in ("tips_seen", "tips_clicks"):
+        st.session_state.pop(k, None)
+    try:
+        st.cache_data.clear()
+        st.cache_resource.clear()
+    except Exception:
+        pass
+    st.session_state["tips_version"] = VERSION
+    st.rerun()
 
-# セッションに「すでに見たネタ」を記録して重複を減らす
+# セッション最小限のキー（プールは持たない）
 if "tips_seen" not in st.session_state:
     st.session_state["tips_seen"] = set()
+if "tips_clicks" not in st.session_state:
+    st.session_state["tips_clicks"] = 0
 
-remaining = [i for i in range(len(TIPS)) if i not in st.session_state["tips_seen"]]
-if not remaining:
-    # すべて出し切ったらリセットして再びシャッフル
-    st.session_state["tips_seen"].clear()
-    remaining = list(range(len(TIPS)))
+def pick_next_tip() -> dict:
+    """未表示のものから 1 件。尽きたら自動リセット。"""
+    n = len(TIPS)
+    remaining = [i for i in range(n) if i not in st.session_state["tips_seen"]]
+    if not remaining:
+        st.session_state["tips_seen"] = set()
+        remaining = list(range(n))
+    # “今日 + クリック回数” を種にして毎回変わるが日内は再現性あり
+    seed = f"{datetime.date.today().isoformat()}-{st.session_state['tips_clicks']}"
+    rng = random.Random(seed)
+    idx = rng.choice(remaining)
+    st.session_state["tips_seen"].add(idx)
+    return TIPS[idx]
 
-idx = random.choice(remaining)
-st.session_state["tips_seen"].add(idx)
-tip = TIPS[idx]
-
-# === おまけ：今日の豆知識（1件だけ・ボタンは下） ===
 with st.expander("おまけ：今日の豆知識", expanded=True):
-    FACTS = [
-        ("フレーミング効果", "同じ内容でも「90%成功」と言われると良く見え、「10%失敗」と言われると悪く見える。"),
-        ("アンカリング", "最初に見た数字（定価など）が頭に残り、後の判断に影響する。"),
-        ("現状維持バイアス", "今のままを選びやすい。変えるのが悪いわけじゃない。準備が大事。"),
-        # …あなたが追加した20件もこの配列に入れておいてください…
-    ]
-
-    idx_key = k("fact_idx") if 'k' in globals() else "fact_idx"
-
-    # 初期化（未設定なら 0）
-    if idx_key not in st.session_state:
-        st.session_state[idx_key] = 0
-
-    # 表示（← 先に出す：ボタンは後）
-    i = st.session_state[idx_key] % len(FACTS)
-    title, desc = FACTS[i]
-    st.markdown(f"**{title}**：{desc}")
-
-    # 次へボタン（on_click でインデックス更新 → 再実行後に上の表示が入れ替わる）
-    def _next_fact():
-        st.session_state[idx_key] = (st.session_state[idx_key] + 1) % len(FACTS)
-
-    st.button("別の豆知識も見る", key=k("fact_next") if 'k' in globals() else "fact_next",
-              on_click=_next_fact)
-
+    tip = pick_next_tip()                      # ← ボタンの“上”に 1件だけ出す
+    st.markdown(f"**{tip['title']}**：{tip['body']}")
+    if st.button("別の豆知識も見る", key="see_another_tip"):
+        st.session_state["tips_clicks"] += 1
+        st.rerun()
 
 
