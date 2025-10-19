@@ -4,8 +4,37 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+st.set_page_config(
+    page_title="バイアス監査アプリ",
+    layout="wide",                      # ← これが効きます
+    initial_sidebar_state="collapsed",  # ← 初期は閉じた状態
+)
+
 import inspect, ui_components
 st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
+
+st.markdown("""
+<style>
+/* サイドバー：開→通常幅、閉→幅ゼロにして隙間を作らない */
+section[data-testid="stSidebar"]{ width: 260px; }
+section[data-testid="stSidebar"][aria-expanded="false"]{
+    width: 0 !important;
+    min-width: 0 !important;
+}
+
+/* デスクトップ時の本文の最大幅（読みやすさキープ用、お好みで調整） */
+@media (min-width: 900px){
+  .main .block-container{
+    max-width: 960px;   /* 800〜1100pxあたりで調整すると読みやすい */
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* モバイルはそのまま全幅でOK */
+</style>
+""", unsafe_allow_html=True)
+
 
 # --- AIクライアント & 簡易解析 ---
 from openai import OpenAI
@@ -370,7 +399,7 @@ def render_cta():
     if clicked:
         try:
             # ファイル名で遷移（pages/配下の実ファイル名に合わせる）
-            st.switch_page("pages/1_解析.py")
+            st.switch_page("pages/バイアス分析.py")
         except Exception:
             # 予備：サイドバーのページ名で遷移（例："1 解析"）
             try:
