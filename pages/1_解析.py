@@ -138,6 +138,9 @@ TIPS = [
     {"title": "ダニング＝クルーガー効果", "body": "知識が浅い人ほど自信過剰になる傾向。例：初心者が“もう完璧に理解した”と思い込む。"}
 ]
 
+VERSION = "tips-2025-10-19-01"  # ←適当に更新
+st.caption(f"豆知識データ: {VERSION}")
+
 
 # セッションに「すでに見たネタ」を記録して重複を減らす
 if "tips_seen" not in st.session_state:
