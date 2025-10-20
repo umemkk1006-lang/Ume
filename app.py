@@ -9,8 +9,38 @@ st.set_page_config(
     layout="wide",                      # ← これが効きます
     initial_sidebar_state="collapsed",  # ← 初期は閉じた状態
 )
+st.markdown("""
+<style>
+/* ===== ヒーロー（見出し＋説明＋CTA） ===== */
+#cta-hero { padding: 8px 0 6px; }
+#cta-hero h2 { margin: 0 0 8px; font-weight: 800; }
+#cta-hero p  { margin: 0 14px 12px 0; color: #495057; }
 
-import streamlit as st
+/* ヒーロー下にCTAを密着配置（上の余白ゼロ、下だけ少し） */
+#cta-wrap{ margin: 0 0 24px; display:flex; justify-content:center; }
+
+/* Streamlit 1.50対応：CTAボタンを確実に“塗りつぶし”にする */
+#cta-wrap .stButton > button,
+#cta-wrap button[data-testid="stBaseButton-primary"],
+#cta-wrap button[data-testid="baseButton-primary"],
+#cta-wrap button[data-testid="stBaseButton-secondary"]{
+  background-color: #7AA5A0 !important;  /* ← 好きな色に変えてOK */
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  padding: .85rem 1.2rem !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,.16) !important;
+  width: min(720px, 100%) !important;
+}
+#cta-wrap .stButton > button:hover{ filter: brightness(.96) !important; }
+
+/* セクション間の余白（ヒーロー直下を詰め、それ以降は通常） */
+.section { margin: 24px 0; }
+</style>
+""", unsafe_allow_html=True)
+
 
 # ===== ヒーロー/CTA 専用スタイル（1か所に統一） =====
 st.markdown("""
@@ -39,21 +69,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ===== 上部に“ヒーロー＋CTA”を表示 =====
-with st.container():
-    st.markdown('<div id="cta-hero">', unsafe_allow_html=True)
-    st.markdown("### ここからすぐにバイアス分析アプリへ")
-    st.caption("入力は1分。AIがあなたの文章から代表的なバイアスを抽出します。")
-    st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
-    goto_bias_top = st.button("🧠 バイアスを解析する", key="goto_bias_top", use_container_width=True)
-    st.markdown('</div></div>', unsafe_allow_html=True)
+# ===== 上部ヒーロー＋CTA =====
+st.markdown('<div id="cta-hero">', unsafe_allow_html=True)
+st.markdown("## ここからすぐにバイアス分析アプリへ")
+st.write("入力は1分。AIがあなたの文章から代表的なバイアスを抽出します。")
+st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
+goto_bias_top = st.button("🧠 バイアスを解析する", key="goto_bias_top", use_container_width=True)
+st.markdown('</div></div>', unsafe_allow_html=True)
 
 if goto_bias_top:
     st.switch_page("pages/1_バイアス分析.py")
 
 
 import inspect, ui_components
-st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
 
 st.markdown("""
 <style>
@@ -438,17 +466,6 @@ def _goto_bias_page():
             st.caption(f"• {p.name}")
 
 
-def render_cta():
-    st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
-    clicked = st.button("🧠 バイアスを解析する", key="goto_bias", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if clicked:
-        _goto_bias_page()
-
-
-# ★ フォームの外で呼び出してください
-render_cta()
 
 
 
