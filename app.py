@@ -105,7 +105,6 @@ section[data-testid="stSidebar"][aria-expanded="false"]{
 </style>
 """, unsafe_allow_html=True)
 
-
 # --- AIクライアント & 簡易解析 ---
 from openai import OpenAI
 
@@ -271,37 +270,51 @@ with st.form("bias_input_form", clear_on_submit=False):
         submit = st.form_submit_button("AIで解析する")
 
 
-# --- 解析処理と結果表示 ---
-if submit:  # 「AIで解析する」ボタンが押されたとき
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+# --- AI解析ロジックをラップしてタイムアウト制御 ---
+def run_analyze_with_timeout(text, category, timeout_s=60):
+    from logic_simple import analyze_with_ai  # ← 既存関数を呼び出し
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        fut = ex.submit(analyze_with_ai, text, category)
+        return fut.result(timeout=timeout_s)
+
+# --- ボタン処理 ---
+if submit:
     if not topic.strip():
         st.warning("内容を入力してください。")
     else:
-        with st.spinner("AIが解析中です..."):
-            ai_result = analyze_with_ai(topic)  # ← ここでAI解析関数を呼び出す
+        st.session_state["ai_result"] = None
+        st.session_state["ai_busy"] = True
 
-        # 結果をセッションに保存
-        st.session_state["ai_result"] = ai_result
+        with st.status("AIが解析中です…", expanded=True) as status:
+            try:
+                status.write("① 入力チェック中...")
+                status.write("② AIモデルを呼び出し中...（最大60秒で打ち切り）")
+
+                # タイムアウト付きで実行
+                ai_result = run_analyze_with_timeout(topic, context_tag, timeout_s=60)
+
+                # 結果を保存
+                st.session_state["ai_result"] = ai_result
+                status.update(label="③ 解析完了", state="complete")
+
+            except TimeoutError:
+                status.update(label="タイムアウト：AIの応答がありませんでした。", state="error")
+                st.error("サーバーの応答が遅延しています。数分後に再試行してください。")
+            except Exception as e:
+                status.update(label="解析中にエラーが発生しました。", state="error")
+                st.exception(e)
+            finally:
+                st.session_state["ai_busy"] = False
 
 # --- 結果表示 ---
-if "ai_result" in st.session_state:
+if "ai_result" in st.session_state and st.session_state["ai_result"]:
     st.markdown("---")
     st.subheader("AI解析結果")
     st.markdown(st.session_state["ai_result"])
-    
-
-# ---- ここからが新規：結果カードを常時表示 ----
-st.markdown('<div class="ai-result">', unsafe_allow_html=True)
-
-ai_quick = st.session_state.get("ai_quick")
-if ai_quick:
-    # 解析結果あり → カードに表示
-    st.markdown(f'<div class="card"><pre>{ai_quick}</pre></div>', unsafe_allow_html=True)
 else:
-    # 未実行/空 → プレースホルダーを表示（スペース確保）
-    st.markdown('<div class="card muted">AIの解析結果がここに表示されます。</div>', unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
+    st.info("AIの解析結果がここに表示されます。")
 
 # === モバイル最適化CSS ===
 st.markdown("""
