@@ -128,19 +128,48 @@ def analyze_selection(theme: str, situation: str, sign: str, text: str):
     return hits
 
 # ================================
-# 🔧 仮のAI解析関数（動作確認用）
+# 🤖 OpenAIでAI解析する本番関数
 # ================================
+from openai import OpenAI
+import os
+
 def analyze_with_ai(text, category=None):
     """
-    テキストをAIで解析するダミー関数（あとで本処理に置き換えOK）
+    OpenAIを使ってテキスト内のバイアスを検出し、
+    やさしい言葉でプチ診断を返す。
     """
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    prompt = f"""
+あなたは心理学と行動経済学に詳しいアナリストです。
+次の文章を読んで、どんな認知バイアスが含まれている可能性があるかを判断し、
+人に優しくフィードバックしてください。
+
+出力フォーマットは以下のようにしてください：
+1行目：どんなバイアスが見られるか（例：「確証バイアスが見られます。」）
+2行目：そのバイアスの説明
+3行目以降：ユーザーが視野を広げるための一言アドバイス
+
+入力文：
+{text}
+カテゴリ：{category or "未選択"}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.8,
+    )
+
+    ai_reply = response.choices[0].message.content.strip()
+
+    # 装飾つきで返す
     result = f"""
-    🧠 入力内容: {text}
-    📂 カテゴリ: {category or "未選択"}
+    🧠 **入力内容:** {text}
+    📂 **カテゴリ:** {category or "未選択"}
     ---
-    ✅ 解析結果サンプル：
-    「確証バイアス」が含まれる可能性があります。
+    ✅ **AI診断結果**  
+    {ai_reply}
     """
     return result
-
 
