@@ -9,6 +9,11 @@ st.set_page_config(
     layout="wide",                      # ← これが効きます
     initial_sidebar_state="collapsed",  # ← 初期は閉じた状態
 )
+
+import logic_simple, inspect, importlib
+st.caption(f"logic_simple path: {logic_simple.__file__}")
+st.caption(f"has analyze_with_ai? {'analyze_with_ai' in dir(logic_simple)}")
+
 st.markdown("""
 <style>
 /* ===== ヒーロー（見出し＋説明＋CTA） ===== */

@@ -128,20 +128,18 @@ def analyze_selection(theme: str, situation: str, sign: str, text: str):
     return hits
 
 # ================================
-# 🔧 仮のAI解析関数（後で本処理に置き換えOK）
+# 🔧 仮のAI解析関数（動作確認用）
 # ================================
 def analyze_with_ai(text, category=None):
     """
-    テキストをAIで解析するダミー関数（動作確認用）
+    テキストをAIで解析するダミー関数（あとで本処理に置き換えOK）
     """
-    # ここではAIを使わずダミーの結果を返す
     result = f"""
     🧠 入力内容: {text}
     📂 カテゴリ: {category or "未選択"}
     ---
     ✅ 解析結果サンプル：
     「確証バイアス」が含まれる可能性があります。
-    （自分の信じたい情報を優先して受け取る傾向）
     """
     return result
 
