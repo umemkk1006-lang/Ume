@@ -10,6 +10,48 @@ st.set_page_config(
     initial_sidebar_state="collapsed",  # ← 初期は閉じた状態
 )
 
+import streamlit as st
+
+# ===== ヒーロー/CTA 専用スタイル（1か所に統一） =====
+st.markdown("""
+<style>
+/* セクションの上下余白・タイポ */
+#cta-hero { padding: 12px 0 4px; }
+#cta-hero h3 { margin: 0 0 6px; font-weight: 800; }
+#cta-hero p  { margin: 0 0 10px; color: #495057; }
+
+/* ボタン配置と見た目（Streamlit 1.50対応） */
+#cta-wrap{ margin: 8px 0 24px; display:flex; justify-content:center; }
+#cta-wrap .stButton > button,
+#cta-wrap button[data-testid="stBaseButton-primary"],
+#cta-wrap button[data-testid="baseButton-primary"]{
+  background-color:#7AA5A0 !important;   /* 好きな色に変更OK */
+  color:#fff !important;
+  border:none !important;
+  border-radius:14px !important;
+  font-weight:800 !important;
+  font-size:1.05rem !important;
+  padding:.8rem 1.1rem !important;
+  box-shadow:0 8px 18px rgba(0,0,0,.16) !important;
+  width:min(720px,100%) !important;
+}
+#cta-wrap .stButton > button:hover{ filter:brightness(.96) !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ===== 上部に“ヒーロー＋CTA”を表示 =====
+with st.container():
+    st.markdown('<div id="cta-hero">', unsafe_allow_html=True)
+    st.markdown("### ここからすぐにバイアス分析アプリへ")
+    st.caption("入力は1分。AIがあなたの文章から代表的なバイアスを抽出します。")
+    st.markdown('<div id="cta-wrap">', unsafe_allow_html=True)
+    goto_bias_top = st.button("🧠 バイアスを解析する", key="goto_bias_top", use_container_width=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+if goto_bias_top:
+    st.switch_page("pages/1_バイアス分析.py")
+
+
 import inspect, ui_components
 st.caption(f"HERO SIG: {inspect.signature(ui_components.hero)}")
 
@@ -346,47 +388,6 @@ st.markdown("""
   word-break: break-word;
 </style>
 """, unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-/* Streamlit 1.50以降対応ボタンスタイル */
-.st-emotion-cache-7ym5gk button,
-button[data-testid="stBaseButton-primary"],
-button[data-testid="stBaseButton-secondary"],
-div.stButton > button {
-    background-color: #7AA5A0 !important;  /* ← ボタンの色 */
-    color: white !important;
-    font-weight: 700 !important;
-    border-radius: 10px !important;
-    border: none !important;
-    font-size: 1.1rem !important;
-    padding: 0.8em 1.3em !important;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.15) !important;
-}
-.st-emotion-cache-7ym5gk button:hover,
-button[data-testid="stBaseButton-primary"]:hover {
-    filter: brightness(0.95) !important;
-}
-</style>
-            
-<style>
-#cta-wrap{
-  margin: 0px 0 96px;   /* 上24px, 下96px 余白を確保 */
-　padding-top: 0 !important;
-  display: flex;
-  justify-content: center;
-}
-#cta-wrap .stButton > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;  /* テキスト中央揃え */
-  gap: .5rem;               /* 絵文字とのすき間 */
-  min-height: 54px;         /* ボタン高さを安定させる */
-}
-</style>
-            
-""", unsafe_allow_html=True)
-
 
 
 from pathlib import Path
