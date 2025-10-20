@@ -5,6 +5,22 @@ import random
 import datetime
 from logic_simple import analyze_selection, render_finding_card
 
+import streamlit.components.v1 as components
+
+# 2ページ目を開いたら親ウィンドウ（ページ全体）を最上部へ
+components.html(
+    """
+    <script>
+      try {
+        // すぐ実行 + 念のため再実行（モバイルSafariの挙動対策）
+        window.parent.scrollTo({top:0, left:0, behavior:'instant'});
+        setTimeout(() => window.parent.scrollTo(0,0), 0);
+      } catch (e) {}
+    </script>
+    """,
+    height=0,
+)
+
  
 # =========================
 # ページ固有のキー（衝突防止）
