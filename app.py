@@ -273,6 +273,16 @@ with st.form("bias_input_form", clear_on_submit=False):
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
+# --- AI解析ロジックをラップしてタイムアウト制御 ---
+def run_analyze_with_timeout(text, category, timeout_s=60):
+    from logic_simple import analyze_with_ai  # ← 実際の解析関数を呼ぶ
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        fut = ex.submit(analyze_with_ai, text, category)
+        return fut.result(timeout=timeout_s)
+
+
 # --- ボタン処理 ---
 if submit:
     if not topic.strip():
