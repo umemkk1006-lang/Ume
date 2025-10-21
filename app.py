@@ -268,17 +268,10 @@ with st.form("bias_input_form", clear_on_submit=False):
             "カテゴリ（任意）", ["未選択", "ニュース", "投資・お金", "キャリア・進路", "健康", "その他"]
         )
     with col2:
-        submit = st.form_submit_button("AIで解析する")
+        submit = st.form_submit_button("🧠 バイアス・プチチェック")
 
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-
-# --- AI解析ロジックをラップしてタイムアウト制御 ---
-def run_analyze_with_timeout(text, category, timeout_s=60):
-    from logic_simple import analyze_with_ai  # ← 既存関数を呼び出し
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        fut = ex.submit(analyze_with_ai, text, category)
-        return fut.result(timeout=timeout_s)
 
 # --- ボタン処理 ---
 if submit:
@@ -288,34 +281,26 @@ if submit:
         st.session_state["ai_result"] = None
         st.session_state["ai_busy"] = True
 
-        with st.status("AIが解析中です…", expanded=True) as status:
-            try:
-                status.write("① 入力チェック中...")
-                status.write("② AIモデルを呼び出し中...（最大60秒で打ち切り）")
+        try:
+            # 解析を実行（AI→ルールベースどちらでもOK）
+            ai_result = run_analyze_with_timeout(topic, context_tag)
+            st.session_state["ai_result"] = ai_result
 
-                # タイムアウト付きで実行
-                ai_result = run_analyze_with_timeout(topic, context_tag, timeout_s=60)
+        except TimeoutError:
+            st.error("サーバーの応答が遅延しています。しばらくして再試行してください。")
+        except Exception as e:
+            st.error(f"解析中にエラーが発生しました: {e}")
+        finally:
+            st.session_state["ai_busy"] = False
 
-                # 結果を保存
-                st.session_state["ai_result"] = ai_result
-                status.update(label="③ 解析完了", state="complete")
-
-            except TimeoutError:
-                status.update(label="タイムアウト：AIの応答がありませんでした。", state="error")
-                st.error("サーバーの応答が遅延しています。数分後に再試行してください。")
-            except Exception as e:
-                status.update(label="解析中にエラーが発生しました。", state="error")
-                st.exception(e)
-            finally:
-                st.session_state["ai_busy"] = False
 
 # --- 結果表示 ---
 if "ai_result" in st.session_state and st.session_state["ai_result"]:
     st.markdown("---")
-    st.subheader("AI解析結果")
+    st.subheader("💭 バイアス・プチチェック結果")
     st.markdown(st.session_state["ai_result"])
 else:
-    st.info("AIの解析結果がここに表示されます。")
+    st.info("結果がここに表示されます。")
 
 # === モバイル最適化CSS ===
 st.markdown("""
